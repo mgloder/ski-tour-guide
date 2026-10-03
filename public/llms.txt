@@ -1,0 +1,70 @@
+# Ski Guide — llms.txt
+
+> A human & AI-agent-friendly ski reference covering exercises, equipment, and destinations.
+> All data is programmatically accessible via an MCP server endpoint.
+
+## Site
+
+- Home: /
+- Exercise module: /exercise
+- Equipment module: /equipment
+- Places module: /places
+
+## AI / Agent access
+
+### MCP Server (preferred for agents)
+
+- Endpoint: POST /api/mcp
+- Protocol: JSON-RPC 2.0, MCP spec 2024-11-05
+- Discovery: GET /api/mcp returns tool list
+
+#### Available tools
+
+- **ski_list_exercises** — list exercises; filter by `difficulty` (beginner|intermediate|advanced|expert) or `type` (technique|fitness|balance|conditioning)
+- **ski_get_exercise** — get full exercise details by `id`
+- **ski_list_equipment** — list equipment; filter by `category` (skis|boots|poles|helmet|clothing|safety|accessories) or `skillLevel`
+- **ski_get_equipment** — get full equipment details by `id`
+- **ski_list_places** — list ski resorts; filter by `country` or `difficulty`
+- **ski_get_place** — get full resort details by `id`
+
+#### Example: initialize
+
+```json
+POST /api/mcp
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","clientInfo":{"name":"my-agent","version":"1.0"}}}
+```
+
+#### Example: list tools
+
+```json
+POST /api/mcp
+{"jsonrpc":"2.0","id":2,"method":"tools/list"}
+```
+
+#### Example: call a tool
+
+```json
+POST /api/mcp
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ski_list_places","arguments":{"country":"France"}}}
+```
+
+## Content summary
+
+### Exercises (6 entries)
+
+Covers: parallel turn (intermediate/technique), carving (advanced/technique), wall sit (beginner/conditioning), single-leg balance (beginner/balance), short radius turns (advanced/technique), lateral hops (intermediate/fitness).
+
+### Equipment (8 entries)
+
+Covers: all-mountain skis, alpine ski boots, ski poles, ski helmet, avalanche airbag pack, avalanche transceiver/beacon, ski goggles, merino wool base layer.
+
+### Places (6 entries)
+
+Covers: Les Trois Vallées (France), Zermatt (Switzerland), Verbier (Switzerland), St. Anton am Arlberg (Austria), Niseko United (Japan), Les Deux Alpes (France).
+
+## Structured data notes
+
+Each page renders `data-*` attributes on article elements for machine parsing:
+- Exercise articles: `data-exercise-id`
+- Equipment articles: `data-equipment-id`
+- Place articles: `data-place-id`
