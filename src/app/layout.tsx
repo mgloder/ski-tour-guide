@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
+import Script from "next/script";
 import Nav from "@/components/nav";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 export const metadata: Metadata = {
   title: "SKI GUIDE — Exercise, Equipment & Places",
@@ -14,17 +14,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable} h-full`}>
-      <body className="min-h-full flex flex-col bg-black text-white">
+    <html lang="en" className={geist.variable}>
+      <head>
+        <link rel="stylesheet" href="/brutalix.css" />
+      </head>
+      <body>
+        <Script src="/brutalix.js" strategy="afterInteractive" />
         <Nav />
-        <main className="flex-1">{children}</main>
-        <footer className="border-t-2 border-white py-6 text-center text-xs font-mono text-zinc-500 uppercase tracking-widest">
-          AI endpoint:{" "}
-          <code className="text-zinc-300">POST /api/mcp</code>
-          {"  —  "}
-          <a href="/llms.txt" className="hover:text-[#ffd400] transition-colors">
-            llms.txt
-          </a>
+        <main>{children}</main>
+        <footer className="bx-mt-6" style={{ borderTop: "3px solid currentColor", padding: "1.5rem", textAlign: "center", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.5 }}>
+          AI endpoint: <code>POST /api/mcp</code>
+          {" — "}
+          <a href="/llms.txt">llms.txt</a>
         </footer>
       </body>
     </html>

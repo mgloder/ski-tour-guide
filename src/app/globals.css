@@ -1,49 +1,28 @@
-@import "tailwindcss";
-
-:root {
-  --bg: #000000;
-  --fg: #ffffff;
-  --accent: #ffd400;
-  --muted: #71717a;
-  --border: #ffffff;
-}
-
-@theme inline {
-  --color-background: var(--bg);
-  --color-foreground: var(--fg);
-  --color-accent: var(--accent);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-geist-sans, Arial, Helvetica, sans-serif);
-}
-
-.brut-card {
-  border: 2px solid #ffffff;
-  box-shadow: 4px 4px 0 0 #ffffff;
-  transition: box-shadow 80ms ease, transform 80ms ease;
-}
-
-.brut-card:hover {
-  box-shadow: 6px 6px 0 0 #ffffff;
-  transform: translate(-2px, -2px);
-}
-
-.brut-card-accent {
-  border: 2px solid var(--accent);
-  box-shadow: 4px 4px 0 0 var(--accent);
-  transition: box-shadow 80ms ease, transform 80ms ease;
-}
-
-.brut-card-accent:hover {
-  box-shadow: 6px 6px 0 0 var(--accent);
-  transform: translate(-2px, -2px);
+  font-family: var(--font-geist-sans, system-ui, sans-serif);
 }
 
 details summary::-webkit-details-marker {
   display: none;
+}
+
+.run-strip {
+  display: flex;
+  border: 3px solid currentColor;
+}
+
+.run-strip-cell {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-right: 2px solid rgba(255,255,255,0.3);
+  color: #fff;
+}
+
+.run-strip-cell:last-child {
+  border-right: none;
 }

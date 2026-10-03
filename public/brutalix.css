@@ -1,0 +1,4057 @@
+/*!
+ * Brutalix — a neubrutalist CSS framework
+ * https://brutalix.ayazpoor.fr — part of the Ayazpoor ecosystem
+ *
+ * Copyright (c) 2026 Olivier AYAZPOOR
+ * olivier@ayazpoor.fr · @Ohw2222 (GitHub) · @olivpics (Instagram)
+ *
+ * Dual-licensed under Apache-2.0 or MIT, at your option.
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+ *
+ * ---------------------------------------------------------------------------
+ * THE RULES
+ *
+ * Neubrutalism is not decoration, it is construction left visible. Five rules,
+ * obeyed by every component in this file:
+ *
+ *   1. HARD SHADOWS. Never blurred. A solid block of colour offset behind the
+ *      element — `box-shadow: 6px 6px 0 0 var(--bx-ink)`. Blur radius is
+ *      always zero. There is no exception anywhere in the framework.
+ *   2. THICK BORDERS. Three pixels by default, solid, the same colour as the
+ *      shadow. Every box is compartmentalised and says so.
+ *   3. HIGH CONTRAST. Vintage off-white paper against saturated, clashing
+ *      accents. Nothing is tinted, nothing is translucent, nothing is subtle.
+ *   4. UTILITARIAN TYPE. Grotesque sans or monospace, heavy weights, oversized
+ *      headings, tight tracking. Type is structure, not ornament.
+ *   5. EXPOSED GRID. Dividing lines are drawn, not implied. The layout admits
+ *      it is a layout.
+ *
+ * Two shapes, switched with one attribute on <html>:
+ *   data-corners="square"    hard 90° angles  (the default)
+ *   data-corners="rounded"   the same brutalism with a radius
+ *
+ * Four typefaces, switched the same way:
+ *   data-font="grotesk" | "mono" | "display" | "system"
+ *
+ * Sixteen themes — eight families, each a light and a dark:
+ *   data-theme="acid"  … and  data-theme="acid-dark"
+ *
+ * No build step. No dependencies. No JavaScript needed for appearance.
+ * ---------------------------------------------------------------------------
+ */
+
+/* ===========================================================================
+   1. TOKENS
+   =========================================================================== */
+
+:root {
+    color-scheme: light dark;
+
+    /* ---- the two colours everything is built from ---------------------- */
+    --bx-ink: #000000;          /* borders, shadows, text — the black */
+    --bx-ink-rgb: 0, 0, 0;
+    --bx-paper: #fdfbf5;        /* the page: vintage off-white, never grey */
+    --bx-surface: #ffffff;      /* what a card sits on */
+    --bx-sunken: #f2efe4;       /* what a field is cut into */
+    --bx-muted: #5c5850;
+
+    /* ---- saturated, clashing, unapologetic ----------------------------- */
+    --bx-primary: #2b44ff;      --bx-primary-ink: #ffffff;
+    --bx-secondary: #ff4d00;    --bx-secondary-ink: #000000;
+    --bx-accent: #ffe500;       --bx-accent-ink: #000000;
+    --bx-success: #00c853;      --bx-success-ink: #000000;
+    --bx-danger: #ff0033;       --bx-danger-ink: #ffffff;
+    --bx-warning: #ffb800;      --bx-warning-ink: #000000;
+    --bx-info: #00d9ff;         --bx-info-ink: #000000;
+    --bx-violet: #7c3aed;       --bx-violet-ink: #ffffff;
+    --bx-hot: #ff2d95;          --bx-hot-ink: #000000;
+    --bx-acid: #c6ff00;         --bx-acid-ink: #000000;
+
+    /* ---- construction --------------------------------------------------- */
+    --bx-border-width: 3px;
+    --bx-border-thin: 2px;
+    --bx-border-thick: 5px;
+    --bx-border-slab: 8px;
+    --bx-border: var(--bx-border-width) solid var(--bx-ink);
+
+    /* The offset of the hard shadow. The blur is not a variable, because the
+       blur is always zero — making it configurable would invite someone to
+       set it, and then this would be a different framework. */
+    --bx-shadow-x: 6px;
+    --bx-shadow-y: 6px;
+    --bx-shadow-color: var(--bx-ink);
+    --bx-shadow: var(--bx-shadow-x) var(--bx-shadow-y) 0 0 var(--bx-shadow-color);
+    --bx-shadow-sm: 3px 3px 0 0 var(--bx-shadow-color);
+    --bx-shadow-lg: 10px 10px 0 0 var(--bx-shadow-color);
+    --bx-shadow-xl: 16px 16px 0 0 var(--bx-shadow-color);
+    --bx-shadow-inset: inset 4px 4px 0 0 var(--bx-shadow-color);
+
+    /* Square is the default. data-corners="rounded" changes only this block. */
+    --bx-radius: 0px;
+    --bx-radius-sm: 0px;
+    --bx-radius-lg: 0px;
+    --bx-radius-pill: 0px;
+
+    /* ---- type ----------------------------------------------------------- */
+    --bx-font-grotesk: "Archivo", "Archivo Black", "Helvetica Neue", Helvetica,
+        "Arial Black", Arial, sans-serif;
+    --bx-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono",
+        Menlo, Consolas, "Liberation Mono", monospace;
+    --bx-font-display: "Archivo Black", "Impact", "Haettenschweiler",
+        "Arial Black", sans-serif;
+    --bx-font-system: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    --bx-font: var(--bx-font-grotesk);
+    --bx-font-heading: var(--bx-font-display);
+    --bx-font-code: var(--bx-font-mono);
+
+    --bx-text-xs: 0.75rem;
+    --bx-text-sm: 0.875rem;
+    --bx-text-md: 1rem;
+    --bx-text-lg: 1.125rem;
+    --bx-text-xl: 1.375rem;
+    --bx-text-2xl: 1.75rem;
+    --bx-text-3xl: 2.25rem;
+    --bx-text-4xl: 3rem;
+    --bx-text-5xl: 4rem;
+    --bx-text-6xl: 5.5rem;
+    --bx-text-7xl: 7rem;
+
+    --bx-weight-normal: 500;
+    --bx-weight-bold: 700;
+    --bx-weight-black: 900;
+
+    --bx-tracking-tight: -0.03em;
+    --bx-tracking-normal: 0;
+    --bx-tracking-wide: 0.08em;
+    --bx-leading-tight: 0.95;
+    --bx-leading-normal: 1.5;
+
+    /* ---- geometry -------------------------------------------------------- */
+    --bx-space-0: 0;
+    --bx-space-1: 0.25rem;
+    --bx-space-2: 0.5rem;
+    --bx-space-3: 0.75rem;
+    --bx-space-4: 1rem;
+    --bx-space-5: 1.5rem;
+    --bx-space-6: 2rem;
+    --bx-space-7: 2.5rem;
+    --bx-space-8: 3rem;
+    --bx-space-10: 4rem;
+    --bx-space-12: 5rem;
+    --bx-space-16: 7rem;
+
+    --bx-gutter: 1.5rem;
+    --bx-container: 1280px;
+    --bx-container-wide: 1600px;
+
+    /* ---- depth ----------------------------------------------------------- */
+    --bx-z-sticky: 30;
+    --bx-z-navbar: 40;
+    --bx-z-backdrop: 1040;
+    --bx-z-drawer: 1045;
+    --bx-z-modal: 1050;
+    --bx-z-popover: 1070;
+    --bx-z-tooltip: 1080;
+    --bx-z-toast: 1090;
+
+    /* ---- motion: fast and mechanical, never eased into softness ---------- */
+    --bx-ease: cubic-bezier(0.2, 0.9, 0.3, 1);
+    --bx-ease-step: steps(4, end);
+    --bx-fast: 0.08s;
+    --bx-normal: 0.14s;
+    --bx-slow: 0.3s;
+
+    /* How far a pressed element travels into its own shadow. */
+    --bx-press: 3px;
+}
+
+/* ---------------------------------------------------------------------------
+   2. SHAPE — square is the default; rounded is the same brutalism with a radius
+   --------------------------------------------------------------------------- */
+
+:root[data-corners="rounded"] {
+    --bx-radius: 14px;
+    --bx-radius-sm: 8px;
+    --bx-radius-lg: 22px;
+    --bx-radius-pill: 999px;
+}
+
+:root[data-corners="soft"] {
+    --bx-radius: 6px;
+    --bx-radius-sm: 4px;
+    --bx-radius-lg: 10px;
+    --bx-radius-pill: 999px;
+}
+
+/* CIRCULAR — the radius runs away with itself. Buttons, badges, fields and
+   small boxes become true stadiums; the border stays three pixels thick and
+   the shadow stays hard, so it is still the same framework. */
+:root[data-corners="circular"] {
+    --bx-radius: 999px;
+    --bx-radius-sm: 999px;
+    --bx-radius-lg: 999px;
+    --bx-radius-pill: 999px;
+}
+
+/* Panels are the exception, and it is a practical one rather than a stylistic
+   one: these clip their children, so a 999px radius would eat the corners of
+   the content inside them. They get the largest radius that still leaves a
+   usable rectangle. */
+:root[data-corners="circular"] .bx-card,
+:root[data-corners="circular"] .bx-modal-dialog,
+:root[data-corners="circular"] .bx-accordion,
+:root[data-corners="circular"] .bx-list-group,
+:root[data-corners="circular"] .bx-table,
+:root[data-corners="circular"] .bx-brick,
+:root[data-corners="circular"] .bx-window,
+:root[data-corners="circular"] .bx-hero,
+:root[data-corners="circular"] .bx-dropdown-menu,
+:root[data-corners="circular"] .bx-popover,
+:root[data-corners="circular"] .bx-toast,
+:root[data-corners="circular"] .bx-alert,
+:root[data-corners="circular"] pre {
+    border-radius: 2.5rem;
+}
+
+/* And the two that cannot round at all without breaking their own geometry. */
+:root[data-corners="circular"] .bx-navbar,
+:root[data-corners="circular"] .bx-drawer { border-radius: 0; }
+
+/* ---------------------------------------------------------------------------
+   3. TYPE MODE
+   --------------------------------------------------------------------------- */
+
+:root[data-font="grotesk"] { --bx-font: var(--bx-font-grotesk); --bx-font-heading: var(--bx-font-display); }
+:root[data-font="mono"]    { --bx-font: var(--bx-font-mono);    --bx-font-heading: var(--bx-font-mono); --bx-tracking-tight: -0.01em; }
+:root[data-font="display"] { --bx-font: var(--bx-font-display); --bx-font-heading: var(--bx-font-display); }
+:root[data-font="system"]  { --bx-font: var(--bx-font-system);  --bx-font-heading: var(--bx-font-system); }
+
+/* ===========================================================================
+   4. THEMES — eight families, each with a light and a dark
+   ---------------------------------------------------------------------------
+   The naming contract matches the rest of the ecosystem: NAME is the light
+   member, NAME-dark is its pair. The default family is the bare :root above
+   plus [data-theme="dark"] below, so a page that sets nothing still works.
+   =========================================================================== */
+
+/* The default family's LIGHT member has to be a real, nameable value.
+ *
+ * It used to be the empty string — "no attribute at all" — and that was a bug:
+ * with no attribute the media query below takes over, so a visitor on a
+ * dark-set machine who explicitly asked for light got dark, and the toggle
+ * looked broken because pressing it changed nothing they could see.
+ *
+ * Now every state is explicit. `data-theme` absent means "nobody has chosen",
+ * and only then does the system preference decide. */
+:root[data-theme="light"] {
+    --bx-ink: #000000;
+    --bx-ink-rgb: 0, 0, 0;
+    --bx-paper: #fdfbf5;
+    --bx-surface: #ffffff;
+    --bx-sunken: #f2efe4;
+    --bx-muted: #5c5850;
+    --bx-primary: #2b44ff;      --bx-primary-ink: #ffffff;
+    --bx-secondary: #ff4d00;    --bx-secondary-ink: #000000;
+    --bx-accent: #ffe500;       --bx-accent-ink: #000000;
+    --bx-success: #00c853;      --bx-success-ink: #000000;
+    --bx-danger: #ff0033;       --bx-danger-ink: #ffffff;
+    --bx-warning: #ffb800;      --bx-warning-ink: #000000;
+    --bx-info: #00d9ff;         --bx-info-ink: #000000;
+}
+
+:root[data-theme="dark"] {
+    --bx-ink: #ffffff;
+    --bx-ink-rgb: 255, 255, 255;
+    --bx-paper: #0d0d0f;
+    --bx-surface: #17171b;
+    --bx-sunken: #101013;
+    --bx-muted: #a8a49c;
+    --bx-primary: #5c6fff;      --bx-primary-ink: #000000;
+    --bx-secondary: #ff6a2b;    --bx-secondary-ink: #000000;
+    --bx-accent: #ffe500;       --bx-accent-ink: #000000;
+    --bx-danger: #ff3355;       --bx-danger-ink: #000000;
+}
+
+/* auto-dark ONLY when nothing was chosen, so a picked family is never
+   overridden on a machine that happens to be set to dark */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        --bx-ink: #ffffff;
+        --bx-ink-rgb: 255, 255, 255;
+        --bx-paper: #0d0d0f;
+        --bx-surface: #17171b;
+        --bx-sunken: #101013;
+        --bx-muted: #a8a49c;
+        --bx-primary: #5c6fff;   --bx-primary-ink: #000000;
+        --bx-secondary: #ff6a2b; --bx-secondary-ink: #000000;
+        --bx-danger: #ff3355;    --bx-danger-ink: #000000;
+    }
+}
+
+/* ---- ACID — neon green against bleached paper ------------------------- */
+[data-theme="acid"] {
+    --bx-ink: #06170a; --bx-ink-rgb: 6, 23, 10;
+    --bx-paper: #f4fff0; --bx-surface: #ffffff; --bx-sunken: #e6f7df; --bx-muted: #4a6b4f;
+    --bx-primary: #00e05a; --bx-primary-ink: #06170a;
+    --bx-secondary: #ff00a8; --bx-secondary-ink: #ffffff;
+    --bx-accent: #e8ff00; --bx-accent-ink: #06170a;
+    --bx-info: #00d9ff; --bx-info-ink: #06170a;
+}
+[data-theme="acid-dark"] {
+    --bx-ink: #d6ffb0; --bx-ink-rgb: 214, 255, 176;
+    --bx-paper: #070d06; --bx-surface: #0f1a0d; --bx-sunken: #0a120a; --bx-muted: #8fae86;
+    --bx-primary: #4dff8f; --bx-primary-ink: #070d06;
+    --bx-secondary: #ff35bd; --bx-secondary-ink: #070d06;
+    --bx-accent: #e8ff00; --bx-accent-ink: #070d06;
+    --bx-info: #46e6ff; --bx-info-ink: #070d06;
+}
+
+/* ---- FLARE — traffic yellow and hazard orange ------------------------- */
+[data-theme="flare"] {
+    --bx-ink: #1a1200; --bx-ink-rgb: 26, 18, 0;
+    --bx-paper: #fffceb; --bx-surface: #ffffff; --bx-sunken: #fff4c9; --bx-muted: #6b5a2a;
+    --bx-primary: #ffb800; --bx-primary-ink: #1a1200;
+    --bx-secondary: #ff3d00; --bx-secondary-ink: #ffffff;
+    --bx-accent: #00c2ff; --bx-accent-ink: #1a1200;
+}
+[data-theme="flare-dark"] {
+    --bx-ink: #ffe9a8; --bx-ink-rgb: 255, 233, 168;
+    --bx-paper: #120d00; --bx-surface: #1d1503; --bx-sunken: #150f01; --bx-muted: #b39a5e;
+    --bx-primary: #ffc933; --bx-primary-ink: #120d00;
+    --bx-secondary: #ff6633; --bx-secondary-ink: #120d00;
+    --bx-accent: #33ceff; --bx-accent-ink: #120d00;
+}
+
+/* ---- BLOOD — pure red, black, and a warning yellow -------------------- */
+[data-theme="blood"] {
+    --bx-ink: #1a0000; --bx-ink-rgb: 26, 0, 0;
+    --bx-paper: #fff5f5; --bx-surface: #ffffff; --bx-sunken: #ffe4e4; --bx-muted: #7a4444;
+    --bx-primary: #ff0033; --bx-primary-ink: #ffffff;
+    --bx-secondary: #1a0000; --bx-secondary-ink: #ffffff;
+    --bx-accent: #ffd400; --bx-accent-ink: #1a0000;
+}
+[data-theme="blood-dark"] {
+    --bx-ink: #ffd4d4; --bx-ink-rgb: 255, 212, 212;
+    --bx-paper: #0f0405; --bx-surface: #1c090b; --bx-sunken: #140607; --bx-muted: #b07a7a;
+    --bx-primary: #ff3355; --bx-primary-ink: #0f0405;
+    --bx-secondary: #ffd4d4; --bx-secondary-ink: #0f0405;
+    --bx-accent: #ffd400; --bx-accent-ink: #0f0405;
+}
+
+/* ---- BUBBLE — hot pink and electric violet ---------------------------- */
+[data-theme="bubble"] {
+    --bx-ink: #1f0016; --bx-ink-rgb: 31, 0, 22;
+    --bx-paper: #fff0fa; --bx-surface: #ffffff; --bx-sunken: #ffdcf2; --bx-muted: #7d4a6a;
+    --bx-primary: #ff2d95; --bx-primary-ink: #ffffff;
+    --bx-secondary: #7a00ff; --bx-secondary-ink: #ffffff;
+    --bx-accent: #00e5ff; --bx-accent-ink: #1f0016;
+}
+[data-theme="bubble-dark"] {
+    --bx-ink: #ffd6f0; --bx-ink-rgb: 255, 214, 240;
+    --bx-paper: #12000d; --bx-surface: #1f0417; --bx-sunken: #170210; --bx-muted: #bb84a6;
+    --bx-primary: #ff5cae; --bx-primary-ink: #12000d;
+    --bx-secondary: #a34dff; --bx-secondary-ink: #12000d;
+    --bx-accent: #33ebff; --bx-accent-ink: #12000d;
+}
+
+/* ---- CYBER — cyan and magenta on cold white --------------------------- */
+[data-theme="cyber"] {
+    --bx-ink: #001417; --bx-ink-rgb: 0, 20, 23;
+    --bx-paper: #f0feff; --bx-surface: #ffffff; --bx-sunken: #d9f7fa; --bx-muted: #3d6469;
+    --bx-primary: #00d9ff; --bx-primary-ink: #001417;
+    --bx-secondary: #ff006e; --bx-secondary-ink: #ffffff;
+    --bx-accent: #c6ff00; --bx-accent-ink: #001417;
+}
+[data-theme="cyber-dark"] {
+    --bx-ink: #b6f4ff; --bx-ink-rgb: 182, 244, 255;
+    --bx-paper: #00090b; --bx-surface: #041619; --bx-sunken: #020f11; --bx-muted: #6fa3ab;
+    --bx-primary: #33e2ff; --bx-primary-ink: #00090b;
+    --bx-secondary: #ff3d8b; --bx-secondary-ink: #00090b;
+    --bx-accent: #c6ff00; --bx-accent-ink: #00090b;
+}
+
+/* ---- VIOLET — deep purple with a mint clash --------------------------- */
+[data-theme="violet"] {
+    --bx-ink: #16032e; --bx-ink-rgb: 22, 3, 46;
+    --bx-paper: #f7f2ff; --bx-surface: #ffffff; --bx-sunken: #ebe0ff; --bx-muted: #5f4a7d;
+    --bx-primary: #7c3aed; --bx-primary-ink: #ffffff;
+    --bx-secondary: #ff8a00; --bx-secondary-ink: #16032e;
+    --bx-accent: #00ffb2; --bx-accent-ink: #16032e;
+}
+[data-theme="violet-dark"] {
+    --bx-ink: #e4d4ff; --bx-ink-rgb: 228, 212, 255;
+    --bx-paper: #0b0416; --bx-surface: #170a26; --bx-sunken: #110720; --bx-muted: #9d86bd;
+    --bx-primary: #a06bff; --bx-primary-ink: #0b0416;
+    --bx-secondary: #ffa333; --bx-secondary-ink: #0b0416;
+    --bx-accent: #33ffc4; --bx-accent-ink: #0b0416;
+}
+
+/* ---- CONCRETE — the quiet one, for pages that carry a lot of text ------ */
+[data-theme="concrete"] {
+    --bx-ink: #14140f; --bx-ink-rgb: 20, 20, 15;
+    --bx-paper: #eeece3; --bx-surface: #f7f5ee; --bx-sunken: #e2dfd2; --bx-muted: #5e5b50;
+    --bx-primary: #2b44ff; --bx-primary-ink: #ffffff;
+    --bx-secondary: #d94f00; --bx-secondary-ink: #ffffff;
+    --bx-accent: #ffe500; --bx-accent-ink: #14140f;
+}
+[data-theme="concrete-dark"] {
+    --bx-ink: #e8e5d8; --bx-ink-rgb: 232, 229, 216;
+    --bx-paper: #131311; --bx-surface: #1e1e1a; --bx-sunken: #171714; --bx-muted: #9a968a;
+    --bx-primary: #7d8bff; --bx-primary-ink: #131311;
+    --bx-secondary: #ff8340; --bx-secondary-ink: #131311;
+    --bx-accent: #ffe500; --bx-accent-ink: #131311;
+}
+
+/* ---- XEROX — pure black on pure white, nothing else ------------------- */
+[data-theme="xerox"] {
+    --bx-ink: #000000; --bx-ink-rgb: 0, 0, 0;
+    --bx-paper: #ffffff; --bx-surface: #ffffff; --bx-sunken: #f0f0f0; --bx-muted: #4d4d4d;
+    --bx-primary: #000000; --bx-primary-ink: #ffffff;
+    --bx-secondary: #000000; --bx-secondary-ink: #ffffff;
+    --bx-accent: #ffffff; --bx-accent-ink: #000000;
+    --bx-success: #000000; --bx-success-ink: #ffffff;
+    --bx-danger: #000000; --bx-danger-ink: #ffffff;
+    --bx-warning: #ffffff; --bx-warning-ink: #000000;
+    --bx-info: #ffffff; --bx-info-ink: #000000;
+}
+[data-theme="xerox-dark"] {
+    --bx-ink: #ffffff; --bx-ink-rgb: 255, 255, 255;
+    --bx-paper: #000000; --bx-surface: #000000; --bx-sunken: #141414; --bx-muted: #b3b3b3;
+    --bx-primary: #ffffff; --bx-primary-ink: #000000;
+    --bx-secondary: #ffffff; --bx-secondary-ink: #000000;
+    --bx-accent: #000000; --bx-accent-ink: #ffffff;
+    --bx-success: #ffffff; --bx-success-ink: #000000;
+    --bx-danger: #ffffff; --bx-danger-ink: #000000;
+    --bx-warning: #000000; --bx-warning-ink: #ffffff;
+    --bx-info: #000000; --bx-info-ink: #ffffff;
+}
+
+/* ===========================================================================
+   5. RESET
+   =========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+    tab-size: 4;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bx-paper);
+    color: var(--bx-ink);
+    font-family: var(--bx-font);
+    font-size: var(--bx-text-md);
+    font-weight: var(--bx-weight-normal);
+    line-height: var(--bx-leading-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+img, svg, video, canvas, iframe, embed, object { display: block; max-width: 100%; }
+img, video { height: auto; }
+
+button, input, optgroup, select, textarea {
+    margin: 0;
+    font: inherit;
+    color: inherit;
+}
+
+button, [type="button"], [type="reset"], [type="submit"] {
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+button:disabled, [type="button"]:disabled, [type="submit"]:disabled { cursor: not-allowed; }
+
+textarea { resize: vertical; }
+fieldset { min-width: 0; padding: 0; margin: 0; border: 0; }
+table { border-collapse: collapse; }
+th { text-align: inherit; }
+summary { cursor: pointer; display: list-item; }
+[hidden] { display: none !important; }
+
+::selection { background: var(--bx-accent); color: var(--bx-accent-ink); }
+
+:focus-visible {
+    outline: var(--bx-border-width) solid var(--bx-ink);
+    outline-offset: 3px;
+}
+
+/* Even the scrollbar is compartmentalised. */
+* { scrollbar-width: auto; scrollbar-color: var(--bx-ink) var(--bx-sunken); }
+*::-webkit-scrollbar { width: 14px; height: 14px; }
+*::-webkit-scrollbar-track { background: var(--bx-sunken); border-left: var(--bx-border-thin) solid var(--bx-ink); }
+*::-webkit-scrollbar-thumb { background: var(--bx-ink); border: 3px solid var(--bx-sunken); }
+*::-webkit-scrollbar-thumb:hover { background: var(--bx-primary); }
+
+/* ===========================================================================
+   6. TYPOGRAPHY — oversized, heavy, tight
+   =========================================================================== */
+
+h1, h2, h3, h4, h5, h6,
+.bx-h1, .bx-h2, .bx-h3, .bx-h4, .bx-h5, .bx-h6 {
+    margin: 0 0 var(--bx-space-4);
+    font-family: var(--bx-font-heading);
+    font-weight: var(--bx-weight-black);
+    line-height: var(--bx-leading-tight);
+    letter-spacing: var(--bx-tracking-tight);
+    text-transform: none;
+}
+
+h1, .bx-h1 { font-size: clamp(2.5rem, 6vw, var(--bx-text-5xl)); }
+h2, .bx-h2 { font-size: clamp(2rem, 4.5vw, var(--bx-text-4xl)); }
+h3, .bx-h3 { font-size: clamp(1.5rem, 3.2vw, var(--bx-text-3xl)); }
+h4, .bx-h4 { font-size: var(--bx-text-2xl); }
+h5, .bx-h5 { font-size: var(--bx-text-xl); }
+h6, .bx-h6 { font-size: var(--bx-text-lg); letter-spacing: var(--bx-tracking-wide); text-transform: uppercase; }
+
+/* The oversized display sizes: for the one line on the page that shouts. */
+.bx-display-1 { font-size: clamp(3rem, 11vw, var(--bx-text-7xl)); }
+.bx-display-2 { font-size: clamp(2.75rem, 9vw, var(--bx-text-6xl)); }
+.bx-display-3 { font-size: clamp(2.5rem, 7vw, var(--bx-text-5xl)); }
+.bx-display-1, .bx-display-2, .bx-display-3 {
+    margin: 0 0 var(--bx-space-5);
+    font-family: var(--bx-font-heading);
+    font-weight: var(--bx-weight-black);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+}
+
+/* Type as construction: an outline instead of a fill. */
+.bx-text-outline {
+    color: transparent;
+    -webkit-text-stroke: 2px var(--bx-ink);
+    paint-order: stroke fill;
+}
+
+.bx-text-shadow {
+    text-shadow: var(--bx-shadow-x) var(--bx-shadow-y) 0 var(--bx-shadow-color);
+}
+
+.bx-text-mark {
+    display: inline-block;
+    padding: 0.1em 0.35em;
+    background: var(--bx-accent);
+    color: var(--bx-accent-ink);
+    border: var(--bx-border);
+    box-shadow: var(--bx-shadow-sm);
+}
+
+p { margin: 0 0 var(--bx-space-4); }
+p:last-child { margin-bottom: 0; }
+
+.bx-lead {
+    font-size: var(--bx-text-lg);
+    font-weight: var(--bx-weight-normal);
+    line-height: 1.55;
+}
+
+a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 3px;
+    text-underline-offset: 0.18em;
+    text-decoration-color: var(--bx-primary);
+    transition: background var(--bx-fast) var(--bx-ease), color var(--bx-fast) var(--bx-ease);
+}
+
+a:hover { background: var(--bx-primary); color: var(--bx-primary-ink); text-decoration-color: currentColor; }
+
+ul, ol { margin: 0 0 var(--bx-space-4); padding-left: var(--bx-space-5); }
+li { margin-bottom: var(--bx-space-1); }
+li::marker { font-weight: var(--bx-weight-black); }
+
+.bx-list-unstyled { padding-left: 0; list-style: none; }
+.bx-list-inline { padding-left: 0; list-style: none; }
+.bx-list-inline > li { display: inline-block; margin-right: var(--bx-space-4); }
+
+/* A checklist that uses a real mark rather than a bullet. */
+.bx-list-check { padding-left: 0; list-style: none; }
+.bx-list-check > li {
+    position: relative;
+    padding-left: 2rem;
+    margin-bottom: var(--bx-space-2);
+}
+.bx-list-check > li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.35em;
+    width: 1.1rem;
+    height: 1.1rem;
+    background: var(--bx-primary);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+}
+
+dl { margin: 0 0 var(--bx-space-4); }
+dt { font-weight: var(--bx-weight-black); text-transform: uppercase; letter-spacing: var(--bx-tracking-wide); font-size: var(--bx-text-sm); }
+dd { margin: 0 0 var(--bx-space-3); }
+
+small, .bx-small { font-size: var(--bx-text-sm); }
+
+.bx-muted { color: var(--bx-muted); }
+
+kbd {
+    display: inline-block;
+    padding: 0.15em 0.5em;
+    font-family: var(--bx-font-code);
+    font-size: 0.85em;
+    font-weight: var(--bx-weight-bold);
+    background: var(--bx-surface);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+    box-shadow: 2px 2px 0 0 var(--bx-ink);
+}
+
+/* A colour and the surface it was chosen for must never be separated.
+ *
+ * `--bx-accent-ink` is the colour that is legible ON the accent — in the dark
+ * family it is pure black, because the accent there is yellow. So the moment
+ * anything removes the accent background but keeps that text colour, you get
+ * black on near-black and the content is simply gone.
+ *
+ * That happened here, in `pre code`, and it is the single worst class of bug
+ * a themed framework can ship: invisible, theme-specific, and silent. Every
+ * rule below that drops the background therefore restores the colour in the
+ * same breath. If you add another, do the same. */
+code {
+    font-family: var(--bx-font-code);
+    font-size: 0.9em;
+    font-weight: var(--bx-weight-bold);
+    background: var(--bx-accent);
+    color: var(--bx-accent-ink);
+    padding: 0.1em 0.3em;
+    border: var(--bx-border-thin) solid var(--bx-ink);
+}
+
+/* background removed -> colour restored, in the same rule, every time */
+a > code,
+pre code,
+.bx-btn code,
+.bx-badge code,
+.bx-card-header code,
+.bx-modal-header code,
+.bx-drawer-header code,
+.bx-window-bar code,
+.bx-table thead code,
+.bx-alert code,
+.bx-dropdown-header code,
+.bx-list-item.bx-active code,
+.bx-accordion-btn[aria-expanded="true"] code,
+.bx-step.bx-done code,
+.bx-step.bx-active code,
+.bx-tab.bx-active code,
+.bx-page-link.bx-active code {
+    background: transparent;
+    border-color: transparent;
+    color: inherit;
+    padding: 0;
+}
+
+pre {
+    margin: 0 0 var(--bx-space-4);
+    padding: var(--bx-space-5);
+    overflow: auto;
+    font-family: var(--bx-font-code);
+    font-size: var(--bx-text-sm);
+    line-height: 1.6;
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+}
+
+pre code { font-size: inherit; font-weight: 500; }
+
+/* A <pre> stripped of its own frame still has to say what colour its text is,
+   because "inherit" from an ink-coloured bar would be paper on paper. */
+pre[style], .bx-window-body pre, .bx-card-body pre, .bx-modal-body pre {
+    color: var(--bx-ink);
+    background: var(--bx-surface);
+}
+
+blockquote, .bx-quote {
+    margin: var(--bx-space-6) 0;
+    padding: var(--bx-space-5) var(--bx-space-6);
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-left-width: var(--bx-border-slab);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    font-size: var(--bx-text-lg);
+    font-weight: var(--bx-weight-bold);
+}
+
+blockquote p:last-child { margin-bottom: 0; }
+
+blockquote cite, .bx-quote-by {
+    display: block;
+    margin-top: var(--bx-space-3);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-normal);
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+}
+blockquote cite::before, .bx-quote-by::before { content: "// "; }
+
+hr, .bx-rule {
+    height: 0;
+    margin: var(--bx-space-6) 0;
+    border: 0;
+    border-top: var(--bx-border-width) solid var(--bx-ink);
+}
+
+.bx-rule-thick { border-top-width: var(--bx-border-slab); }
+.bx-rule-dashed { border-top-style: dashed; }
+
+figure { margin: 0 0 var(--bx-space-4); }
+figcaption, .bx-caption {
+    padding: var(--bx-space-2) var(--bx-space-3);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-bold);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+    border-top: 0;
+    background: var(--bx-surface);
+}
+
+/* ===========================================================================
+   7. THE BOX
+   ---------------------------------------------------------------------------
+   Every compartment in the framework is this: a solid surface, a thick border,
+   a hard shadow with zero blur. `.bx-box` is it on its own, and every
+   component below is built from the same three declarations rather than
+   inventing its own. Change --bx-border-width or --bx-shadow-x once and the
+   entire framework changes with it.
+   =========================================================================== */
+
+.bx-box {
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+}
+
+.bx-box-flat   { box-shadow: none; }
+.bx-box-sm     { box-shadow: var(--bx-shadow-sm); }
+.bx-box-lg     { box-shadow: var(--bx-shadow-lg); }
+.bx-box-xl     { box-shadow: var(--bx-shadow-xl); }
+.bx-box-inset  { box-shadow: var(--bx-shadow-inset); }
+
+/* The shadow thrown the other way, for things that hang off the left. */
+.bx-box-nw { box-shadow: calc(var(--bx-shadow-x) * -1) calc(var(--bx-shadow-y) * -1) 0 0 var(--bx-shadow-color); }
+.bx-box-ne { box-shadow: var(--bx-shadow-x) calc(var(--bx-shadow-y) * -1) 0 0 var(--bx-shadow-color); }
+.bx-box-sw { box-shadow: calc(var(--bx-shadow-x) * -1) var(--bx-shadow-y) 0 0 var(--bx-shadow-color); }
+
+/* A shadow in an accent colour rather than in ink. */
+.bx-shadow-primary   { --bx-shadow-color: var(--bx-primary); }
+.bx-shadow-secondary { --bx-shadow-color: var(--bx-secondary); }
+.bx-shadow-accent    { --bx-shadow-color: var(--bx-accent); }
+.bx-shadow-success   { --bx-shadow-color: var(--bx-success); }
+.bx-shadow-danger    { --bx-shadow-color: var(--bx-danger); }
+.bx-shadow-info      { --bx-shadow-color: var(--bx-info); }
+.bx-shadow-hot       { --bx-shadow-color: var(--bx-hot); }
+.bx-shadow-acid      { --bx-shadow-color: var(--bx-acid); }
+
+/* Press: the element travels into its own shadow, which shrinks to meet it.
+   This is the framework's one universal interaction, and it is applied to
+   anything clickable. */
+.bx-press,
+.bx-btn,
+.bx-tab,
+.bx-page-link,
+.bx-chip-action {
+    transition: transform var(--bx-fast) var(--bx-ease),
+                box-shadow var(--bx-fast) var(--bx-ease),
+                background var(--bx-fast) var(--bx-ease),
+                color var(--bx-fast) var(--bx-ease);
+}
+
+.bx-press:active,
+.bx-btn:not(:disabled):active,
+.bx-page-link:active,
+.bx-chip-action:active {
+    transform: translate(var(--bx-press), var(--bx-press));
+    box-shadow: calc(var(--bx-shadow-x) - var(--bx-press)) calc(var(--bx-shadow-y) - var(--bx-press)) 0 0 var(--bx-shadow-color);
+}
+
+/* Lift: the opposite, for cards that respond to a pointer. */
+.bx-lift { transition: transform var(--bx-normal) var(--bx-ease), box-shadow var(--bx-normal) var(--bx-ease); }
+.bx-lift:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: calc(var(--bx-shadow-x) + 2px) calc(var(--bx-shadow-y) + 2px) 0 0 var(--bx-shadow-color);
+}
+
+/* Deliberately off-square: brutalism's one permitted flourish. */
+.bx-tilt-l { transform: rotate(-1.5deg); }
+.bx-tilt-r { transform: rotate(1.5deg); }
+.bx-tilt-l:hover, .bx-tilt-r:hover { transform: rotate(0); }
+
+/* ===========================================================================
+   8. LAYOUT
+   =========================================================================== */
+
+.bx-container,
+.bx-container-wide,
+.bx-container-fluid {
+    width: 100%;
+    margin: 0 auto;
+    padding-left: var(--bx-gutter);
+    padding-right: var(--bx-gutter);
+}
+
+.bx-container { max-width: var(--bx-container); }
+.bx-container-wide { max-width: var(--bx-container-wide); }
+
+/* ---- the twelve columns ----------------------------------------------- */
+
+.bx-row {
+    --bx-gx: var(--bx-gutter);
+    --bx-gy: var(--bx-gutter);
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: calc(var(--bx-gy) * -1);
+    margin-left: calc(var(--bx-gx) * -0.5);
+    margin-right: calc(var(--bx-gx) * -0.5);
+}
+
+.bx-row > * {
+    flex-shrink: 0;
+    width: 100%;
+    max-width: 100%;
+    margin-top: var(--bx-gy);
+    padding-left: calc(var(--bx-gx) * 0.5);
+    padding-right: calc(var(--bx-gx) * 0.5);
+}
+
+.bx-g-0 { --bx-gx: 0; --bx-gy: 0; }
+.bx-g-1 { --bx-gx: 0.25rem; --bx-gy: 0.25rem; }
+.bx-g-2 { --bx-gx: 0.5rem;  --bx-gy: 0.5rem; }
+.bx-g-3 { --bx-gx: 1rem;    --bx-gy: 1rem; }
+.bx-g-4 { --bx-gx: 1.5rem;  --bx-gy: 1.5rem; }
+.bx-g-5 { --bx-gx: 2.5rem;  --bx-gy: 2.5rem; }
+.bx-gx-0 { --bx-gx: 0; } .bx-gy-0 { --bx-gy: 0; }
+
+.bx-col { flex: 1 0 0%; }
+.bx-col-auto { flex: 0 0 auto; width: auto; }
+.bx-col-1  { flex: 0 0 auto; width: 8.3333%; }
+.bx-col-2  { flex: 0 0 auto; width: 16.6667%; }
+.bx-col-3  { flex: 0 0 auto; width: 25%; }
+.bx-col-4  { flex: 0 0 auto; width: 33.3333%; }
+.bx-col-5  { flex: 0 0 auto; width: 41.6667%; }
+.bx-col-6  { flex: 0 0 auto; width: 50%; }
+.bx-col-7  { flex: 0 0 auto; width: 58.3333%; }
+.bx-col-8  { flex: 0 0 auto; width: 66.6667%; }
+.bx-col-9  { flex: 0 0 auto; width: 75%; }
+.bx-col-10 { flex: 0 0 auto; width: 83.3333%; }
+.bx-col-11 { flex: 0 0 auto; width: 91.6667%; }
+.bx-col-12 { flex: 0 0 auto; width: 100%; }
+
+.bx-cols-1 > * { flex: 0 0 auto; width: 100%; }
+.bx-cols-2 > * { flex: 0 0 auto; width: 50%; }
+.bx-cols-3 > * { flex: 0 0 auto; width: 33.3333%; }
+.bx-cols-4 > * { flex: 0 0 auto; width: 25%; }
+.bx-cols-6 > * { flex: 0 0 auto; width: 16.6667%; }
+
+.bx-offset-1 { margin-left: 8.3333%; }
+.bx-offset-2 { margin-left: 16.6667%; }
+.bx-offset-3 { margin-left: 25%; }
+.bx-offset-4 { margin-left: 33.3333%; }
+.bx-offset-6 { margin-left: 50%; }
+
+.bx-order-first { order: -1; }
+.bx-order-last { order: 13; }
+.bx-order-1 { order: 1; } .bx-order-2 { order: 2; } .bx-order-3 { order: 3; }
+
+@media (min-width: 576px) {
+    .bx-col-sm { flex: 1 0 0%; }
+    .bx-col-sm-auto { flex: 0 0 auto; width: auto; }
+    .bx-col-sm-3 { flex: 0 0 auto; width: 25%; }
+    .bx-col-sm-4 { flex: 0 0 auto; width: 33.3333%; }
+    .bx-col-sm-6 { flex: 0 0 auto; width: 50%; }
+    .bx-col-sm-8 { flex: 0 0 auto; width: 66.6667%; }
+    .bx-col-sm-12 { flex: 0 0 auto; width: 100%; }
+    .bx-cols-sm-2 > * { width: 50%; } .bx-cols-sm-3 > * { width: 33.3333%; }
+}
+
+@media (min-width: 768px) {
+    .bx-col-md { flex: 1 0 0%; }
+    .bx-col-md-auto { flex: 0 0 auto; width: auto; }
+    .bx-col-md-2  { flex: 0 0 auto; width: 16.6667%; }
+    .bx-col-md-3  { flex: 0 0 auto; width: 25%; }
+    .bx-col-md-4  { flex: 0 0 auto; width: 33.3333%; }
+    .bx-col-md-5  { flex: 0 0 auto; width: 41.6667%; }
+    .bx-col-md-6  { flex: 0 0 auto; width: 50%; }
+    .bx-col-md-7  { flex: 0 0 auto; width: 58.3333%; }
+    .bx-col-md-8  { flex: 0 0 auto; width: 66.6667%; }
+    .bx-col-md-9  { flex: 0 0 auto; width: 75%; }
+    .bx-col-md-12 { flex: 0 0 auto; width: 100%; }
+    .bx-cols-md-2 > * { width: 50%; } .bx-cols-md-3 > * { width: 33.3333%; }
+    .bx-cols-md-4 > * { width: 25%; }
+    .bx-offset-md-0 { margin-left: 0; }
+}
+
+@media (min-width: 992px) {
+    .bx-col-lg { flex: 1 0 0%; }
+    .bx-col-lg-auto { flex: 0 0 auto; width: auto; }
+    .bx-col-lg-2  { flex: 0 0 auto; width: 16.6667%; }
+    .bx-col-lg-3  { flex: 0 0 auto; width: 25%; }
+    .bx-col-lg-4  { flex: 0 0 auto; width: 33.3333%; }
+    .bx-col-lg-5  { flex: 0 0 auto; width: 41.6667%; }
+    .bx-col-lg-6  { flex: 0 0 auto; width: 50%; }
+    .bx-col-lg-7  { flex: 0 0 auto; width: 58.3333%; }
+    .bx-col-lg-8  { flex: 0 0 auto; width: 66.6667%; }
+    .bx-col-lg-9  { flex: 0 0 auto; width: 75%; }
+    .bx-col-lg-12 { flex: 0 0 auto; width: 100%; }
+    .bx-cols-lg-3 > * { width: 33.3333%; } .bx-cols-lg-4 > * { width: 25%; }
+    .bx-cols-lg-6 > * { width: 16.6667%; }
+}
+
+@media (min-width: 1200px) {
+    .bx-col-xl-3 { flex: 0 0 auto; width: 25%; }
+    .bx-col-xl-4 { flex: 0 0 auto; width: 33.3333%; }
+    .bx-col-xl-6 { flex: 0 0 auto; width: 50%; }
+    .bx-col-xl-8 { flex: 0 0 auto; width: 66.6667%; }
+    .bx-cols-xl-4 > * { width: 25%; }
+}
+
+/* ---- THE EXPOSED GRID --------------------------------------------------
+   A layout that admits it is a layout. The dividing lines between cells are
+   real borders, not gaps: one outer border on the container, and one border
+   per cell, collapsed by a negative margin so adjacent cells share a single
+   line rather than doubling it. This is the module the whole aesthetic is
+   named for. */
+
+.bx-brick {
+    display: grid;
+    grid-template-columns: repeat(var(--bx-brick-cols, 3), minmax(0, 1fr));
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    background: var(--bx-surface);
+    box-shadow: var(--bx-shadow);
+    overflow: hidden;
+}
+
+.bx-brick > * {
+    padding: var(--bx-space-5);
+    border-right: var(--bx-border-width) solid var(--bx-ink);
+    border-bottom: var(--bx-border-width) solid var(--bx-ink);
+    margin: 0;
+}
+
+/* The right-hand column and the last row have no neighbour to divide from. */
+.bx-brick > *:nth-child(var(--bx-brick-cols, 3)n) { border-right: 0; }
+
+.bx-brick-1 { --bx-brick-cols: 1; }
+.bx-brick-2 { --bx-brick-cols: 2; }
+.bx-brick-3 { --bx-brick-cols: 3; }
+.bx-brick-4 { --bx-brick-cols: 4; }
+.bx-brick-6 { --bx-brick-cols: 6; }
+
+.bx-brick-1 > *:nth-child(1n) { border-right: 0; }
+.bx-brick-2 > *:nth-child(2n) { border-right: 0; }
+.bx-brick-3 > *:nth-child(3n) { border-right: 0; }
+.bx-brick-4 > *:nth-child(4n) { border-right: 0; }
+.bx-brick-6 > *:nth-child(6n) { border-right: 0; }
+
+/* A cell that spans, for the deliberately irregular module. */
+.bx-brick-span-2 { grid-column: span 2; }
+.bx-brick-span-3 { grid-column: span 3; }
+.bx-brick-span-full { grid-column: 1 / -1; }
+.bx-brick-tall { grid-row: span 2; }
+
+@media (max-width: 767px) {
+    .bx-brick { grid-template-columns: minmax(0, 1fr); }
+    .bx-brick > * { border-right: 0; }
+    .bx-brick-span-2, .bx-brick-span-3 { grid-column: auto; }
+}
+
+/* Ruled sections: a page divided by lines you can see. */
+.bx-ruled > * + * { border-top: var(--bx-border-width) solid var(--bx-ink); }
+.bx-ruled-thick > * + * { border-top: var(--bx-border-slab) solid var(--bx-ink); }
+.bx-ruled-x > * + * { border-left: var(--bx-border-width) solid var(--bx-ink); border-top: 0; }
+
+.bx-section {
+    padding-top: var(--bx-space-10);
+    padding-bottom: var(--bx-space-10);
+    border-bottom: var(--bx-border-width) solid var(--bx-ink);
+}
+
+.bx-section-thick { border-bottom-width: var(--bx-border-slab); }
+
+/* ---- flex and grid helpers --------------------------------------------- */
+
+.bx-stack { display: flex; flex-direction: column; }
+.bx-cluster { display: flex; flex-wrap: wrap; align-items: center; }
+.bx-split { display: flex; align-items: center; justify-content: space-between; }
+.bx-center { display: flex; align-items: center; justify-content: center; }
+
+.bx-grid { display: grid; gap: var(--bx-gutter); }
+.bx-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bx-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.bx-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.bx-grid-fit { grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); }
+
+@media (max-width: 767px) {
+    .bx-grid-2, .bx-grid-3, .bx-grid-4 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- aspect ratios ------------------------------------------------------ */
+
+.bx-ratio { position: relative; width: 100%; }
+.bx-ratio::before { display: block; content: ""; padding-top: var(--bx-aspect, 100%); }
+.bx-ratio > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bx-ratio-1x1 { --bx-aspect: 100%; }
+.bx-ratio-4x3 { --bx-aspect: 75%; }
+.bx-ratio-16x9 { --bx-aspect: 56.25%; }
+.bx-ratio-21x9 { --bx-aspect: 42.857%; }
+
+/* ---- surface treatments ------------------------------------------------- */
+
+/* Diagonal hatching, drawn with a gradient so it costs no image. */
+.bx-hatch {
+    background-image: repeating-linear-gradient(45deg,
+        var(--bx-ink) 0, var(--bx-ink) 2px,
+        transparent 2px, transparent 9px);
+}
+
+.bx-hatch-soft {
+    background-image: repeating-linear-gradient(45deg,
+        var(--bx-ink) 0, var(--bx-ink) 1px,
+        transparent 1px, transparent 8px);
+    opacity: 0.9;
+}
+
+/* Hazard stripes, for anything that warns. */
+.bx-hazard {
+    background-image: repeating-linear-gradient(-45deg,
+        var(--bx-ink) 0, var(--bx-ink) 12px,
+        var(--bx-accent) 12px, var(--bx-accent) 24px);
+}
+
+.bx-dots {
+    background-image: radial-gradient(var(--bx-ink) 1.5px, transparent 1.5px);
+    background-size: 12px 12px;
+}
+
+.bx-graph {
+    background-image:
+        linear-gradient(var(--bx-ink) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bx-ink) 1px, transparent 1px);
+    background-size: 28px 28px;
+    opacity: 1;
+}
+
+/* ===========================================================================
+   9. BUTTONS
+   =========================================================================== */
+
+.bx-btn {
+    --bx-btn-bg: var(--bx-surface);
+    --bx-btn-fg: var(--bx-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--bx-space-2);
+    padding: 0.7em 1.4em;
+    background: var(--bx-btn-bg);
+    color: var(--bx-btn-fg);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    font-family: var(--bx-font);
+    font-size: var(--bx-text-md);
+    font-weight: var(--bx-weight-black);
+    line-height: 1.1;
+    letter-spacing: var(--bx-tracking-wide);
+    text-transform: uppercase;
+    text-decoration: none;
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.bx-btn:hover {
+    background: var(--bx-btn-fg);
+    color: var(--bx-btn-bg);
+    text-decoration: none;
+}
+
+.bx-btn:disabled,
+.bx-btn.bx-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+    box-shadow: var(--bx-shadow-sm);
+}
+
+.bx-btn-primary   { --bx-btn-bg: var(--bx-primary);   --bx-btn-fg: var(--bx-primary-ink); }
+.bx-btn-secondary { --bx-btn-bg: var(--bx-secondary); --bx-btn-fg: var(--bx-secondary-ink); }
+.bx-btn-accent    { --bx-btn-bg: var(--bx-accent);    --bx-btn-fg: var(--bx-accent-ink); }
+.bx-btn-success   { --bx-btn-bg: var(--bx-success);   --bx-btn-fg: var(--bx-success-ink); }
+.bx-btn-danger    { --bx-btn-bg: var(--bx-danger);    --bx-btn-fg: var(--bx-danger-ink); }
+.bx-btn-warning   { --bx-btn-bg: var(--bx-warning);   --bx-btn-fg: var(--bx-warning-ink); }
+.bx-btn-info      { --bx-btn-bg: var(--bx-info);      --bx-btn-fg: var(--bx-info-ink); }
+.bx-btn-violet    { --bx-btn-bg: var(--bx-violet);    --bx-btn-fg: var(--bx-violet-ink); }
+.bx-btn-hot       { --bx-btn-bg: var(--bx-hot);       --bx-btn-fg: var(--bx-hot-ink); }
+.bx-btn-acid      { --bx-btn-bg: var(--bx-acid);      --bx-btn-fg: var(--bx-acid-ink); }
+.bx-btn-ink       { --bx-btn-bg: var(--bx-ink);       --bx-btn-fg: var(--bx-paper); }
+
+/* Ghost keeps the border and drops the fill. */
+.bx-btn-ghost {
+    --bx-btn-bg: transparent;
+    box-shadow: none;
+}
+.bx-btn-ghost:hover { background: var(--bx-ink); color: var(--bx-paper); }
+
+/* Naked: type only, until you touch it. */
+.bx-btn-bare {
+    --bx-btn-bg: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    padding: 0.4em 0.6em;
+}
+.bx-btn-bare:hover { border-color: var(--bx-ink); background: var(--bx-accent); color: var(--bx-accent-ink); }
+
+.bx-btn-xs { font-size: var(--bx-text-xs); padding: 0.45em 0.9em; }
+.bx-btn-sm { font-size: var(--bx-text-sm); padding: 0.55em 1.1em; }
+.bx-btn-lg { font-size: var(--bx-text-lg); padding: 0.85em 1.8em; }
+.bx-btn-xl { font-size: var(--bx-text-xl); padding: 1em 2.2em; }
+
+.bx-btn-block { display: flex; width: 100%; }
+.bx-btn-pill { border-radius: 999px; }
+.bx-btn-icon { padding: 0.7em; aspect-ratio: 1; }
+.bx-btn-icon.bx-btn-sm { padding: 0.55em; }
+.bx-btn-icon.bx-btn-lg { padding: 0.85em; }
+
+/* ---- button groups ------------------------------------------------------ */
+
+.bx-btn-group { display: inline-flex; }
+.bx-btn-group > .bx-btn { border-radius: 0; box-shadow: none; }
+.bx-btn-group > .bx-btn + .bx-btn { border-left-width: 0; }
+.bx-btn-group > .bx-btn:first-child { border-top-left-radius: var(--bx-radius); border-bottom-left-radius: var(--bx-radius); }
+.bx-btn-group > .bx-btn:last-child { border-top-right-radius: var(--bx-radius); border-bottom-right-radius: var(--bx-radius); }
+.bx-btn-group { box-shadow: var(--bx-shadow); border-radius: var(--bx-radius); }
+.bx-btn-group > .bx-btn:active { transform: none; }
+
+.bx-btn-group-v { display: inline-flex; flex-direction: column; box-shadow: var(--bx-shadow); }
+.bx-btn-group-v > .bx-btn { border-radius: 0; box-shadow: none; }
+.bx-btn-group-v > .bx-btn + .bx-btn { border-top-width: 0; }
+
+.bx-btn-toolbar { display: flex; flex-wrap: wrap; gap: var(--bx-space-3); }
+
+/* A radio group that looks like a segmented control. */
+.bx-btn-check { position: absolute; clip: rect(0, 0, 0, 0); pointer-events: none; }
+.bx-btn-check:checked + .bx-btn { background: var(--bx-ink); color: var(--bx-paper); }
+.bx-btn-check:focus-visible + .bx-btn { outline: var(--bx-border-width) solid var(--bx-primary); outline-offset: 3px; }
+
+/* ===========================================================================
+   10. BADGES, TAGS, CHIPS
+   =========================================================================== */
+
+.bx-badge {
+    --bx-badge-bg: var(--bx-accent);
+    --bx-badge-fg: var(--bx-accent-ink);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bx-space-1);
+    padding: 0.25em 0.6em;
+    background: var(--bx-badge-bg);
+    color: var(--bx-badge-fg);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+    border-radius: var(--bx-radius-sm);
+    font-size: var(--bx-text-xs);
+    font-weight: var(--bx-weight-black);
+    line-height: 1.2;
+    letter-spacing: var(--bx-tracking-wide);
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.bx-badge-primary   { --bx-badge-bg: var(--bx-primary);   --bx-badge-fg: var(--bx-primary-ink); }
+.bx-badge-secondary { --bx-badge-bg: var(--bx-secondary); --bx-badge-fg: var(--bx-secondary-ink); }
+.bx-badge-success   { --bx-badge-bg: var(--bx-success);   --bx-badge-fg: var(--bx-success-ink); }
+.bx-badge-danger    { --bx-badge-bg: var(--bx-danger);    --bx-badge-fg: var(--bx-danger-ink); }
+.bx-badge-warning   { --bx-badge-bg: var(--bx-warning);   --bx-badge-fg: var(--bx-warning-ink); }
+.bx-badge-info      { --bx-badge-bg: var(--bx-info);      --bx-badge-fg: var(--bx-info-ink); }
+.bx-badge-violet    { --bx-badge-bg: var(--bx-violet);    --bx-badge-fg: var(--bx-violet-ink); }
+.bx-badge-hot       { --bx-badge-bg: var(--bx-hot);       --bx-badge-fg: var(--bx-hot-ink); }
+.bx-badge-acid      { --bx-badge-bg: var(--bx-acid);      --bx-badge-fg: var(--bx-acid-ink); }
+.bx-badge-ink       { --bx-badge-bg: var(--bx-ink);       --bx-badge-fg: var(--bx-paper); }
+.bx-badge-bare      { --bx-badge-bg: transparent;         --bx-badge-fg: var(--bx-ink); }
+
+.bx-badge-shadow { box-shadow: 3px 3px 0 0 var(--bx-ink); }
+.bx-badge-pill { border-radius: 999px; padding-left: 0.75em; padding-right: 0.75em; }
+.bx-badge-dot { width: 0.7em; height: 0.7em; padding: 0; }
+
+/* A tag with a remove control. */
+.bx-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bx-space-2);
+    padding: 0.35em 0.5em 0.35em 0.8em;
+    background: var(--bx-surface);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+    border-radius: var(--bx-radius-sm);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-bold);
+}
+
+.bx-chip-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35em;
+    height: 1.35em;
+    padding: 0;
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    border: 0;
+    border-radius: 0;
+    font-size: 0.9em;
+    line-height: 1;
+    cursor: pointer;
+}
+.bx-chip-action:hover { background: var(--bx-danger); color: var(--bx-danger-ink); }
+
+/* ===========================================================================
+   11. ALERTS AND CALLOUTS
+   =========================================================================== */
+
+.bx-alert {
+    --bx-alert-bg: var(--bx-accent);
+    --bx-alert-fg: var(--bx-accent-ink);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--bx-space-3);
+    padding: var(--bx-space-4) var(--bx-space-5);
+    margin-bottom: var(--bx-space-4);
+    background: var(--bx-alert-bg);
+    color: var(--bx-alert-fg);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    font-weight: var(--bx-weight-bold);
+}
+
+.bx-alert-primary { --bx-alert-bg: var(--bx-primary); --bx-alert-fg: var(--bx-primary-ink); }
+.bx-alert-success { --bx-alert-bg: var(--bx-success); --bx-alert-fg: var(--bx-success-ink); }
+.bx-alert-danger  { --bx-alert-bg: var(--bx-danger);  --bx-alert-fg: var(--bx-danger-ink); }
+.bx-alert-warning { --bx-alert-bg: var(--bx-warning); --bx-alert-fg: var(--bx-warning-ink); }
+.bx-alert-info    { --bx-alert-bg: var(--bx-info);    --bx-alert-fg: var(--bx-info-ink); }
+.bx-alert-ink     { --bx-alert-bg: var(--bx-ink);     --bx-alert-fg: var(--bx-paper); }
+.bx-alert-plain   { --bx-alert-bg: var(--bx-surface); --bx-alert-fg: var(--bx-ink); }
+
+.bx-alert-title {
+    display: block;
+    margin-bottom: var(--bx-space-1);
+    font-family: var(--bx-font-heading);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+}
+
+.bx-alert p:last-child { margin-bottom: 0; }
+.bx-alert .bx-close { margin-left: auto; }
+
+/* A callout is an alert with the emphasis on its left edge instead. */
+.bx-callout {
+    padding: var(--bx-space-4) var(--bx-space-5);
+    margin-bottom: var(--bx-space-4);
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-left-width: var(--bx-border-slab);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow-sm);
+}
+
+.bx-callout-primary { border-left-color: var(--bx-primary); }
+.bx-callout-success { border-left-color: var(--bx-success); }
+.bx-callout-danger  { border-left-color: var(--bx-danger); }
+.bx-callout-warning { border-left-color: var(--bx-warning); }
+.bx-callout-info    { border-left-color: var(--bx-info); }
+
+/* The close control, shared by everything that dismisses. */
+.bx-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    flex-shrink: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    border: var(--bx-border-thin) solid currentColor;
+    border-radius: 0;
+    font-size: var(--bx-text-md);
+    font-weight: var(--bx-weight-black);
+    line-height: 1;
+    cursor: pointer;
+}
+.bx-close::before { content: "\00D7"; }
+.bx-close:hover { background: currentColor; }
+.bx-close:hover::before { color: var(--bx-surface); mix-blend-mode: difference; }
+
+/* ===========================================================================
+   12. CARDS
+   =========================================================================== */
+
+.bx-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    overflow: hidden;
+}
+
+.bx-card-header {
+    padding: var(--bx-space-3) var(--bx-space-5);
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    border-bottom: var(--bx-border-width) solid var(--bx-ink);
+    font-family: var(--bx-font-heading);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    display: flex;
+    align-items: center;
+    gap: var(--bx-space-2);
+}
+
+.bx-card-header-plain {
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+}
+
+.bx-card-body { flex: 1 1 auto; padding: var(--bx-space-5); }
+.bx-card-title { margin: 0 0 var(--bx-space-2); font-size: var(--bx-text-xl); }
+.bx-card-subtitle { margin: 0 0 var(--bx-space-3); font-size: var(--bx-text-sm); color: var(--bx-muted); text-transform: uppercase; letter-spacing: var(--bx-tracking-wide); font-weight: var(--bx-weight-bold); }
+.bx-card-text { margin-bottom: var(--bx-space-3); }
+.bx-card-text:last-child { margin-bottom: 0; }
+
+.bx-card-footer {
+    padding: var(--bx-space-3) var(--bx-space-5);
+    margin-top: auto;
+    background: var(--bx-sunken);
+    border-top: var(--bx-border-width) solid var(--bx-ink);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-bold);
+}
+
+.bx-card-img {
+    width: 100%;
+    border-bottom: var(--bx-border-width) solid var(--bx-ink);
+    object-fit: cover;
+}
+
+.bx-card-img-bottom { border-bottom: 0; border-top: var(--bx-border-width) solid var(--bx-ink); }
+
+/* An image with the caption laid straight over it, hard-edged. */
+.bx-card-overlay {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: var(--bx-space-4);
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    border-top: var(--bx-border-width) solid var(--bx-ink);
+}
+
+.bx-card-colored { background: var(--bx-primary); color: var(--bx-primary-ink); }
+.bx-card-colored .bx-card-footer { background: transparent; }
+
+/* ===========================================================================
+   13. LIST GROUPS
+   =========================================================================== */
+
+.bx-list-group {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    overflow: hidden;
+}
+
+.bx-list-item {
+    display: flex;
+    align-items: center;
+    gap: var(--bx-space-3);
+    padding: var(--bx-space-3) var(--bx-space-4);
+    margin: 0;
+    color: inherit;
+    text-decoration: none;
+    font-weight: var(--bx-weight-bold);
+    background: transparent;
+    border: 0;
+    text-align: left;
+    width: 100%;
+}
+
+.bx-list-item + .bx-list-item { border-top: var(--bx-border-width) solid var(--bx-ink); }
+
+a.bx-list-item:hover,
+button.bx-list-item:hover { background: var(--bx-accent); color: var(--bx-accent-ink); text-decoration: none; }
+
+.bx-list-item.bx-active { background: var(--bx-ink); color: var(--bx-paper); }
+.bx-list-item.bx-disabled { opacity: 0.45; pointer-events: none; }
+
+.bx-list-numbered { counter-reset: bx-li; }
+.bx-list-numbered .bx-list-item::before {
+    counter-increment: bx-li;
+    content: counter(bx-li, decimal-leading-zero);
+    flex-shrink: 0;
+    font-family: var(--bx-font-code);
+    font-weight: var(--bx-weight-black);
+    color: var(--bx-muted);
+}
+
+/* ===========================================================================
+   14. TABLES
+   =========================================================================== */
+
+.bx-table {
+    width: 100%;
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    border-collapse: separate;
+    border-spacing: 0;
+    box-shadow: var(--bx-shadow);
+    overflow: hidden;
+}
+
+.bx-table th,
+.bx-table td {
+    padding: var(--bx-space-3) var(--bx-space-4);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.bx-table thead th {
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    font-family: var(--bx-font-heading);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    white-space: nowrap;
+}
+
+.bx-table tbody tr + tr td { border-top: var(--bx-border-width) solid var(--bx-ink); }
+.bx-table tbody td + td,
+.bx-table thead th + th { border-left: var(--bx-border-width) solid var(--bx-ink); }
+.bx-table thead th + th { border-left-color: var(--bx-paper); }
+
+.bx-table tfoot td {
+    border-top: var(--bx-border-slab) solid var(--bx-ink);
+    font-weight: var(--bx-weight-black);
+    background: var(--bx-sunken);
+}
+
+.bx-table-hover tbody tr:hover td { background: var(--bx-accent); color: var(--bx-accent-ink); }
+.bx-table-striped tbody tr:nth-child(odd) td { background: var(--bx-sunken); }
+.bx-table-sm th, .bx-table-sm td { padding: var(--bx-space-2) var(--bx-space-3); }
+.bx-table-flat { box-shadow: none; }
+
+.bx-table-wrap { width: 100%; overflow-x: auto; }
+
+.bx-table caption {
+    caption-side: bottom;
+    padding: var(--bx-space-2) 0;
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-bold);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+}
+
+/* ===========================================================================
+   15. STATS
+   =========================================================================== */
+
+.bx-stat {
+    padding: var(--bx-space-5);
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+}
+
+.bx-stat-label {
+    display: block;
+    font-size: var(--bx-text-xs);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    color: var(--bx-muted);
+}
+
+.bx-stat-value {
+    display: block;
+    margin: var(--bx-space-1) 0;
+    font-family: var(--bx-font-heading);
+    font-size: var(--bx-text-4xl);
+    font-weight: var(--bx-weight-black);
+    line-height: 1;
+    letter-spacing: var(--bx-tracking-tight);
+    font-variant-numeric: tabular-nums;
+}
+
+.bx-stat-note { display: block; font-size: var(--bx-text-sm); font-weight: var(--bx-weight-bold); }
+.bx-stat-up { color: var(--bx-success); }
+.bx-stat-down { color: var(--bx-danger); }
+
+/* ===========================================================================
+   16. NAVBAR
+   =========================================================================== */
+
+.bx-navbar {
+    position: sticky;
+    top: 0;
+    z-index: var(--bx-z-navbar);
+    display: flex;
+    align-items: center;
+    gap: var(--bx-space-4);
+    padding: var(--bx-space-3) var(--bx-gutter);
+    background: var(--bx-surface);
+    border-bottom: var(--bx-border-slab) solid var(--bx-ink);
+}
+
+.bx-navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bx-space-2);
+    font-family: var(--bx-font-heading);
+    font-size: var(--bx-text-xl);
+    font-weight: var(--bx-weight-black);
+    letter-spacing: var(--bx-tracking-tight);
+    text-transform: uppercase;
+    text-decoration: none;
+}
+.bx-navbar-brand:hover { background: none; color: inherit; }
+
+.bx-navbar-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--bx-space-1);
+    margin: 0 0 0 auto;
+    padding: 0;
+    list-style: none;
+}
+
+.bx-navbar-nav li { margin: 0; }
+
+.bx-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bx-space-2);
+    padding: var(--bx-space-2) var(--bx-space-3);
+    border: var(--bx-border-thin) solid transparent;
+    border-radius: var(--bx-radius-sm);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    text-decoration: none;
+    cursor: pointer;
+    background: transparent;
+    color: inherit;
+}
+
+.bx-nav-link:hover {
+    background: var(--bx-accent);
+    color: var(--bx-accent-ink);
+    border-color: var(--bx-ink);
+    text-decoration: none;
+}
+
+.bx-nav-link.bx-active {
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    border-color: var(--bx-ink);
+}
+
+.bx-navbar-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    margin-left: auto;
+    padding: 0;
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius-sm);
+    box-shadow: var(--bx-shadow-sm);
+    cursor: pointer;
+}
+
+@media (max-width: 900px) {
+    .bx-navbar { flex-wrap: wrap; }
+    .bx-navbar-toggle { display: inline-flex; }
+    .bx-navbar-nav { display: none; }
+    .bx-navbar-nav.bx-open {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        margin: var(--bx-space-3) 0 0;
+        padding-top: var(--bx-space-3);
+        border-top: var(--bx-border-width) solid var(--bx-ink);
+    }
+}
+
+/* ---- tabs --------------------------------------------------------------- */
+
+.bx-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 0 0 calc(var(--bx-border-width) * -1);
+    padding: 0;
+    list-style: none;
+    position: relative;
+    z-index: 1;
+}
+
+.bx-tab {
+    padding: var(--bx-space-3) var(--bx-space-5);
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius) var(--bx-radius) 0 0;
+    font-family: var(--bx-font-heading);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    cursor: pointer;
+}
+
+.bx-tab + .bx-tab { border-left-width: 0; }
+.bx-tab:hover { background: var(--bx-accent); color: var(--bx-accent-ink); }
+
+.bx-tab.bx-active {
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    border-bottom-color: var(--bx-ink);
+}
+
+.bx-tab-content {
+    padding: var(--bx-space-5);
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-radius: 0 var(--bx-radius) var(--bx-radius) var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+}
+
+.bx-tab-pane { display: none; }
+.bx-tab-pane.bx-active { display: block; }
+
+/* pills: separate blocks rather than a joined strip */
+.bx-tabs-pills { gap: var(--bx-space-2); margin-bottom: var(--bx-space-4); }
+.bx-tabs-pills .bx-tab { border-radius: var(--bx-radius); border-left-width: var(--bx-border-width); box-shadow: var(--bx-shadow-sm); }
+.bx-tabs-pills + .bx-tab-content { border-radius: var(--bx-radius); }
+
+.bx-nav-vertical { flex-direction: column; align-items: stretch; }
+
+/* ---- breadcrumb and pagination ------------------------------------------ */
+
+.bx-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--bx-space-2);
+    padding: var(--bx-space-2) var(--bx-space-3);
+    margin: 0 0 var(--bx-space-5);
+    list-style: none;
+    background: var(--bx-surface);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+    border-radius: var(--bx-radius-sm);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-bold);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+}
+
+.bx-breadcrumb li { margin: 0; display: inline-flex; align-items: center; gap: var(--bx-space-2); }
+.bx-breadcrumb li + li::before { content: "/"; font-weight: var(--bx-weight-black); }
+.bx-breadcrumb .bx-active { color: var(--bx-muted); }
+
+.bx-pagination { display: flex; flex-wrap: wrap; gap: var(--bx-space-2); padding: 0; list-style: none; }
+.bx-pagination li { margin: 0; }
+
+.bx-page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.6rem;
+    height: 2.6rem;
+    padding: 0 var(--bx-space-3);
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius-sm);
+    box-shadow: var(--bx-shadow-sm);
+    font-weight: var(--bx-weight-black);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.bx-page-link:hover { background: var(--bx-accent); color: var(--bx-accent-ink); text-decoration: none; }
+.bx-page-link.bx-active { background: var(--bx-ink); color: var(--bx-paper); }
+.bx-page-link.bx-disabled { opacity: 0.4; pointer-events: none; }
+
+/* ---- steps -------------------------------------------------------------- */
+
+.bx-steps { display: flex; flex-wrap: wrap; gap: 0; padding: 0; margin: 0 0 var(--bx-space-5); list-style: none; }
+
+.bx-step {
+    flex: 1 1 0;
+    min-width: 8rem;
+    padding: var(--bx-space-3) var(--bx-space-4);
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    font-weight: var(--bx-weight-bold);
+    margin: 0;
+}
+
+.bx-step + .bx-step { border-left-width: 0; }
+.bx-step.bx-active { background: var(--bx-primary); color: var(--bx-primary-ink); }
+.bx-step.bx-done { background: var(--bx-ink); color: var(--bx-paper); }
+
+.bx-step-index {
+    display: block;
+    font-family: var(--bx-font-code);
+    font-size: var(--bx-text-xs);
+    letter-spacing: var(--bx-tracking-wide);
+}
+
+/* ===========================================================================
+   17. DROPDOWNS
+   =========================================================================== */
+
+.bx-dropdown { position: relative; display: inline-block; }
+
+.bx-dropdown-menu {
+    position: absolute;
+    top: calc(100% + var(--bx-space-2));
+    left: 0;
+    z-index: var(--bx-z-popover);
+    min-width: 12rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    display: none;
+}
+
+.bx-dropdown.bx-open > .bx-dropdown-menu,
+.bx-dropdown-menu.bx-open { display: block; }
+
+.bx-dropdown-menu-end { left: auto; right: 0; }
+
+.bx-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--bx-space-2);
+    width: 100%;
+    padding: var(--bx-space-2) var(--bx-space-4);
+    background: transparent;
+    color: inherit;
+    border: 0;
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-bold);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.bx-dropdown-item + .bx-dropdown-item { border-top: var(--bx-border-thin) solid var(--bx-ink); }
+.bx-dropdown-item:hover { background: var(--bx-accent); color: var(--bx-accent-ink); text-decoration: none; }
+.bx-dropdown-item.bx-active { background: var(--bx-ink); color: var(--bx-paper); }
+.bx-dropdown-item.bx-disabled { opacity: 0.45; pointer-events: none; }
+
+.bx-dropdown-header {
+    padding: var(--bx-space-2) var(--bx-space-4);
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    font-size: var(--bx-text-xs);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+}
+
+.bx-dropdown-divider { height: 0; margin: 0; border: 0; border-top: var(--bx-border-width) solid var(--bx-ink); }
+
+.bx-caret::after {
+    content: "";
+    display: inline-block;
+    width: 0.4em;
+    height: 0.4em;
+    margin-left: 0.5em;
+    border-right: 3px solid currentColor;
+    border-bottom: 3px solid currentColor;
+    transform: translateY(-0.15em) rotate(45deg);
+}
+
+/* ===========================================================================
+   18. MODAL, DRAWER, BACKDROP
+   =========================================================================== */
+
+.bx-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--bx-z-backdrop);
+    background: var(--bx-ink);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--bx-normal) var(--bx-ease), visibility var(--bx-normal);
+}
+
+.bx-backdrop.bx-open { opacity: 0.82; visibility: visible; z-index: 400; }
+
+.bx-modal {
+    position: fixed;
+    inset: 0;
+    z-index: var(--bx-z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--bx-space-4);
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity var(--bx-normal) var(--bx-ease), visibility var(--bx-normal);
+}
+
+.bx-modal.bx-open { visibility: visible; opacity: 1; }
+
+.bx-modal-dialog {
+    width: 100%;
+    max-width: 34rem;
+    max-height: calc(100vh - var(--bx-space-8));
+    display: flex;
+    flex-direction: column;
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow-xl);
+    transform: translate(-8px, -8px);
+    transition: transform var(--bx-normal) var(--bx-ease);
+}
+
+.bx-modal.bx-open .bx-modal-dialog { transform: none; }
+
+.bx-modal-sm .bx-modal-dialog { max-width: 22rem; }
+.bx-modal-lg .bx-modal-dialog { max-width: 52rem; }
+.bx-modal-xl .bx-modal-dialog { max-width: 70rem; }
+
+.bx-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bx-space-3);
+    padding: var(--bx-space-3) var(--bx-space-5);
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    border-bottom: var(--bx-border-width) solid var(--bx-ink);
+}
+
+.bx-modal-title {
+    margin: 0;
+    font-size: var(--bx-text-lg);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+}
+
+.bx-modal-body { padding: var(--bx-space-5); overflow-y: auto; }
+
+.bx-modal-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--bx-space-3);
+    padding: var(--bx-space-4) var(--bx-space-5);
+    background: var(--bx-sunken);
+    border-top: var(--bx-border-width) solid var(--bx-ink);
+}
+
+/* ---- drawer ------------------------------------------------------------- */
+
+.bx-drawer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--bx-z-drawer);
+    display: flex;
+    flex-direction: column;
+    width: min(340px, 88vw);
+    padding: 0;
+    background: var(--bx-surface);
+    border-right: var(--bx-border-slab) solid var(--bx-ink);
+    transform: translateX(-102%);
+    visibility: hidden;
+    transition: transform var(--bx-slow) var(--bx-ease), visibility var(--bx-slow);
+    overflow-y: auto;
+}
+
+.bx-drawer.bx-open { transform: none; visibility: visible; }
+
+.bx-drawer-end {
+    left: auto;
+    right: 0;
+    border-right: 0;
+    border-left: var(--bx-border-slab) solid var(--bx-ink);
+    transform: translateX(102%);
+}
+
+.bx-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bx-space-3);
+    padding: var(--bx-space-4) var(--bx-space-5);
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+}
+
+.bx-drawer-body { flex: 1 1 auto; padding: var(--bx-space-5); }
+
+/* ===========================================================================
+   19. ACCORDION AND COLLAPSE
+   =========================================================================== */
+
+.bx-accordion {
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    overflow: hidden;
+}
+
+.bx-accordion-item + .bx-accordion-item { border-top: var(--bx-border-width) solid var(--bx-ink); }
+
+.bx-accordion-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bx-space-3);
+    width: 100%;
+    padding: var(--bx-space-4) var(--bx-space-5);
+    background: transparent;
+    color: inherit;
+    border: 0;
+    font-family: var(--bx-font-heading);
+    font-size: var(--bx-text-md);
+    font-weight: var(--bx-weight-black);
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    cursor: pointer;
+}
+
+.bx-accordion-btn:hover { background: var(--bx-accent); color: var(--bx-accent-ink); }
+.bx-accordion-btn[aria-expanded="true"] { background: var(--bx-ink); color: var(--bx-paper); }
+
+.bx-accordion-btn::after {
+    content: "";
+    flex-shrink: 0;
+    width: 0.6em;
+    height: 0.6em;
+    border-right: 3px solid currentColor;
+    border-bottom: 3px solid currentColor;
+    transform: rotate(45deg) translateY(-0.1em);
+    transition: transform var(--bx-normal) var(--bx-ease);
+}
+
+.bx-accordion-btn[aria-expanded="true"]::after { transform: rotate(-135deg) translateY(-0.1em); }
+
+.bx-accordion-body { padding: var(--bx-space-5); border-top: var(--bx-border-thin) solid var(--bx-ink); }
+
+/* Animates the grid track, so nothing has to be measured. */
+.bx-collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--bx-normal) var(--bx-ease);
+}
+.bx-collapse > * { overflow: hidden; min-height: 0; }
+.bx-collapse.bx-open { grid-template-rows: 1fr; }
+
+@supports not (grid-template-rows: 0fr) {
+    .bx-collapse { display: block; max-height: 0; overflow: hidden; transition: max-height var(--bx-normal) var(--bx-ease); }
+    .bx-collapse.bx-open { max-height: 60rem; }
+}
+
+/* ===========================================================================
+   20. TOASTS, TOOLTIPS, POPOVERS
+   =========================================================================== */
+
+.bx-toasts {
+    position: fixed;
+    z-index: var(--bx-z-toast);
+    display: flex;
+    flex-direction: column;
+    gap: var(--bx-space-3);
+    padding: var(--bx-space-4);
+    pointer-events: none;
+}
+
+.bx-toasts-tr { top: 0; right: 0; }
+.bx-toasts-tl { top: 0; left: 0; }
+.bx-toasts-br { bottom: 0; right: 0; flex-direction: column-reverse; }
+.bx-toasts-bl { bottom: 0; left: 0; flex-direction: column-reverse; }
+
+.bx-toast {
+    --bx-toast-bg: var(--bx-surface);
+    --bx-toast-fg: var(--bx-ink);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--bx-space-3);
+    width: min(24rem, calc(100vw - var(--bx-space-8)));
+    padding: var(--bx-space-4);
+    background: var(--bx-toast-bg);
+    color: var(--bx-toast-fg);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    font-weight: var(--bx-weight-bold);
+    pointer-events: auto;
+    transform: translateX(12px);
+    opacity: 0;
+    transition: opacity var(--bx-normal) var(--bx-ease), transform var(--bx-normal) var(--bx-ease);
+}
+
+.bx-toast.bx-open { opacity: 1; transform: none; }
+.bx-toast-primary { --bx-toast-bg: var(--bx-primary); --bx-toast-fg: var(--bx-primary-ink); }
+.bx-toast-success { --bx-toast-bg: var(--bx-success); --bx-toast-fg: var(--bx-success-ink); }
+.bx-toast-danger  { --bx-toast-bg: var(--bx-danger);  --bx-toast-fg: var(--bx-danger-ink); }
+.bx-toast-warning { --bx-toast-bg: var(--bx-warning); --bx-toast-fg: var(--bx-warning-ink); }
+.bx-toast-info    { --bx-toast-bg: var(--bx-info);    --bx-toast-fg: var(--bx-info-ink); }
+.bx-toast-title { display: block; font-family: var(--bx-font-heading); text-transform: uppercase; letter-spacing: var(--bx-tracking-wide); }
+.bx-toast-body { flex: 1 1 auto; font-size: var(--bx-text-sm); }
+
+/* Tooltips need no script. */
+[data-bx-tip] { position: relative; }
+
+[data-bx-tip]::after {
+    content: attr(data-bx-tip);
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: var(--bx-z-tooltip);
+    padding: var(--bx-space-2) var(--bx-space-3);
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+    font-size: var(--bx-text-xs);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+}
+
+[data-bx-tip]:hover::after,
+[data-bx-tip]:focus-visible::after { opacity: 1; visibility: visible; }
+
+[data-bx-tip][data-bx-place="bottom"]::after { bottom: auto; top: calc(100% + 10px); }
+[data-bx-tip][data-bx-place="right"]::after { bottom: auto; top: 50%; left: calc(100% + 10px); transform: translateY(-50%); }
+[data-bx-tip][data-bx-place="left"]::after { bottom: auto; top: 50%; left: auto; right: calc(100% + 10px); transform: translateY(-50%); }
+
+.bx-popover {
+    position: absolute;
+    z-index: var(--bx-z-popover);
+    width: max-content;
+    max-width: 22rem;
+    padding: var(--bx-space-4);
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    display: none;
+}
+.bx-popover.bx-open { display: block; }
+.bx-popover-title { margin: 0 0 var(--bx-space-2); font-size: var(--bx-text-md); text-transform: uppercase; }
+
+/* ===========================================================================
+   21. PROGRESS, METER, SPINNER, SKELETON, AVATAR
+   =========================================================================== */
+
+.bx-progress {
+    height: 1.5rem;
+    background: var(--bx-sunken);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius-sm);
+    overflow: hidden;
+}
+
+.bx-progress-bar {
+    height: 100%;
+    width: 0;
+    background: var(--bx-primary);
+    color: var(--bx-primary-ink);
+    border-right: var(--bx-border-width) solid var(--bx-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--bx-text-xs);
+    font-weight: var(--bx-weight-black);
+    transition: width var(--bx-slow) var(--bx-ease);
+}
+
+.bx-progress-sm { height: 0.9rem; }
+.bx-progress-lg { height: 2.25rem; }
+.bx-progress-bar-success { background: var(--bx-success); color: var(--bx-success-ink); }
+.bx-progress-bar-danger  { background: var(--bx-danger);  color: var(--bx-danger-ink); }
+.bx-progress-bar-warning { background: var(--bx-warning); color: var(--bx-warning-ink); }
+.bx-progress-bar-accent  { background: var(--bx-accent);  color: var(--bx-accent-ink); }
+
+/* Stripes, in steps, so they march rather than glide. */
+.bx-progress-striped .bx-progress-bar {
+    background-image: repeating-linear-gradient(-45deg,
+        var(--bx-ink) 0, var(--bx-ink) 8px, transparent 8px, transparent 20px);
+}
+.bx-progress-marching .bx-progress-bar { animation: bx-march 0.6s steps(6, end) infinite; }
+@keyframes bx-march { from { background-position: 0 0; } to { background-position: 28px 0; } }
+
+/* Segmented meter: blocks, not a bar. */
+.bx-meter { display: flex; gap: 3px; }
+.bx-meter-cell {
+    flex: 1 1 0;
+    height: 1.25rem;
+    background: var(--bx-sunken);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+}
+.bx-meter-cell.bx-on { background: var(--bx-primary); }
+
+.bx-spinner {
+    display: inline-block;
+    width: 1.6rem;
+    height: 1.6rem;
+    background: var(--bx-ink);
+    animation: bx-spin 0.8s steps(8, end) infinite;
+}
+@keyframes bx-spin { to { transform: rotate(360deg); } }
+
+.bx-spinner-sm { width: 1rem; height: 1rem; }
+.bx-spinner-lg { width: 2.4rem; height: 2.4rem; }
+
+.bx-skeleton {
+    display: block;
+    min-height: 1em;
+    background: var(--bx-sunken);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+    animation: bx-blink 1s steps(2, end) infinite;
+}
+@keyframes bx-blink { 50% { opacity: 0.45; } }
+
+.bx-skeleton-line { height: 0.9em; margin-bottom: var(--bx-space-2); }
+.bx-skeleton-w-50 { width: 50%; } .bx-skeleton-w-75 { width: 75%; }
+
+.bx-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    background: var(--bx-accent);
+    color: var(--bx-accent-ink);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius-sm);
+    font-family: var(--bx-font-heading);
+    font-weight: var(--bx-weight-black);
+    overflow: hidden;
+}
+.bx-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.bx-avatar-sm { width: 2rem; height: 2rem; font-size: var(--bx-text-sm); }
+.bx-avatar-lg { width: 4rem; height: 4rem; font-size: var(--bx-text-xl); }
+.bx-avatar-round { border-radius: 999px; }
+
+.bx-avatar-stack { display: inline-flex; }
+.bx-avatar-stack > .bx-avatar + .bx-avatar { margin-left: -0.75rem; }
+
+/* ===========================================================================
+   22. BRUTALIST SPECIALS
+   =========================================================================== */
+
+/* A marquee, because the aesthetic asks for one. Pure CSS, and it stops when
+   the visitor has asked for less motion. */
+.bx-marquee {
+    display: flex;
+    overflow: hidden;
+    padding: var(--bx-space-3) 0;
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    border-top: var(--bx-border-width) solid var(--bx-ink);
+    border-bottom: var(--bx-border-width) solid var(--bx-ink);
+    user-select: none;
+}
+
+.bx-marquee-track {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--bx-space-6);
+    padding-right: var(--bx-space-6);
+    white-space: nowrap;
+    font-family: var(--bx-font-heading);
+    font-size: var(--bx-text-lg);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    animation: bx-scroll var(--bx-marquee-speed, 22s) linear infinite;
+}
+
+.bx-marquee-reverse .bx-marquee-track { animation-direction: reverse; }
+@keyframes bx-scroll { to { transform: translateX(-100%); } }
+
+/* A sticker, rotated and stuck on. */
+.bx-sticker {
+    display: inline-block;
+    padding: var(--bx-space-2) var(--bx-space-4);
+    background: var(--bx-accent);
+    color: var(--bx-accent-ink);
+    border: var(--bx-border);
+    box-shadow: var(--bx-shadow-sm);
+    font-family: var(--bx-font-heading);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    transform: rotate(-3deg);
+}
+
+/* A strip of tape holding something to the page. */
+.bx-tape {
+    position: relative;
+}
+.bx-tape::before {
+    content: "";
+    position: absolute;
+    top: -0.9rem;
+    left: 50%;
+    width: 7rem;
+    height: 1.8rem;
+    transform: translateX(-50%) rotate(-2deg);
+    background: var(--bx-accent);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+    opacity: 0.95;
+}
+
+/* A window frame with a title bar, the oldest UI joke there is. */
+.bx-window {
+    background: var(--bx-surface);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    overflow: hidden;
+}
+.bx-window-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--bx-space-2);
+    padding: var(--bx-space-2) var(--bx-space-3);
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    border-bottom: var(--bx-border-width) solid var(--bx-ink);
+    font-family: var(--bx-font-code);
+    font-size: var(--bx-text-xs);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+}
+.bx-window-dot { width: 0.75rem; height: 0.75rem; background: var(--bx-paper); flex: none; }
+.bx-window-body { padding: var(--bx-space-5); }
+
+/* A hero that sits inside a drawn frame. */
+.bx-hero {
+    padding: var(--bx-space-10) var(--bx-space-6);
+    background: var(--bx-surface);
+    border: var(--bx-border-slab) solid var(--bx-ink);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow-xl);
+}
+
+.bx-hero-flat { box-shadow: none; }
+
+/* ===========================================================================
+   23. FORMS
+   ---------------------------------------------------------------------------
+   A field is cut *into* the page: the same thick border, but the hard shadow
+   is thrown inward instead of outward. Pressed things stick out, typed things
+   go in. That is the whole language, and it is legible without a label.
+   =========================================================================== */
+
+.bx-field { margin-bottom: var(--bx-space-5); }
+
+.bx-label {
+    display: block;
+    margin-bottom: var(--bx-space-2);
+    font-family: var(--bx-font-heading);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+}
+
+.bx-help {
+    display: block;
+    margin-top: var(--bx-space-2);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-bold);
+    color: var(--bx-muted);
+}
+
+.bx-input,
+.bx-select,
+.bx-textarea {
+    display: block;
+    width: 100%;
+    padding: 0.65em 0.85em;
+    background: var(--bx-sunken);
+    color: var(--bx-ink);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius-sm);
+    box-shadow: inset 3px 3px 0 0 rgba(var(--bx-ink-rgb), 0.18);
+    font-family: var(--bx-font);
+    font-size: var(--bx-text-md);
+    font-weight: var(--bx-weight-bold);
+    line-height: 1.4;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: box-shadow var(--bx-fast) var(--bx-ease), background var(--bx-fast) var(--bx-ease);
+}
+
+.bx-input::placeholder, .bx-textarea::placeholder { color: var(--bx-muted); font-weight: var(--bx-weight-normal); }
+
+.bx-input:focus,
+.bx-select:focus,
+.bx-textarea:focus {
+    outline: 0;
+    background: var(--bx-surface);
+    box-shadow: inset 3px 3px 0 0 rgba(var(--bx-ink-rgb), 0.18),
+                0 0 0 3px var(--bx-primary);
+}
+
+.bx-input:disabled, .bx-select:disabled, .bx-textarea:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.bx-input-sm { padding: 0.45em 0.65em; font-size: var(--bx-text-sm); }
+.bx-input-lg { padding: 0.85em 1em; font-size: var(--bx-text-lg); }
+
+.bx-textarea { min-height: 7rem; }
+
+.bx-select {
+    padding-right: 2.75rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='4' stroke-linecap='square'%3E%3Cpath d='m5 9 7 7 7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    background-size: 1rem;
+}
+
+.bx-select[multiple] { background-image: none; padding-right: 0.85em; }
+
+/* ---- input group -------------------------------------------------------- */
+
+.bx-input-group { display: flex; width: 100%; }
+.bx-input-group > .bx-input,
+.bx-input-group > .bx-select { flex: 1 1 auto; width: 1%; min-width: 0; }
+.bx-input-group > * + * { border-left-width: 0; }
+.bx-input-group > *:not(:first-child) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.bx-input-group > *:not(:last-child) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+.bx-input-group-text {
+    display: flex;
+    align-items: center;
+    padding: 0.65em 0.85em;
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius-sm);
+    font-weight: var(--bx-weight-black);
+    white-space: nowrap;
+}
+
+/* ---- checkbox, radio, switch -------------------------------------------- */
+
+.bx-check,
+.bx-radio,
+.bx-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--bx-space-3);
+    font-weight: var(--bx-weight-bold);
+    cursor: pointer;
+}
+
+.bx-check input,
+.bx-radio input {
+    position: relative;
+    flex: none;
+    width: 1.4rem;
+    height: 1.4rem;
+    margin: 0;
+    background: var(--bx-sunken);
+    border: var(--bx-border);
+    box-shadow: 2px 2px 0 0 var(--bx-ink);
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.bx-radio input { border-radius: 999px; }
+
+.bx-check input:checked,
+.bx-radio input:checked { background: var(--bx-primary); }
+
+.bx-check input:checked::after {
+    content: "";
+    position: absolute;
+    top: 42%;
+    left: 50%;
+    width: 0.34em;
+    height: 0.68em;
+    border: solid var(--bx-primary-ink);
+    border-width: 0 4px 4px 0;
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.bx-radio input:checked::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 999px;
+    background: var(--bx-primary-ink);
+}
+
+.bx-check input:focus-visible,
+.bx-radio input:focus-visible { outline: 3px solid var(--bx-primary); outline-offset: 3px; }
+
+.bx-switch input {
+    position: relative;
+    flex: none;
+    width: 3.1rem;
+    height: 1.6rem;
+    margin: 0;
+    background: var(--bx-sunken);
+    border: var(--bx-border);
+    box-shadow: 2px 2px 0 0 var(--bx-ink);
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.bx-switch input::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1.35rem;
+    height: 100%;
+    background: var(--bx-ink);
+    transition: transform var(--bx-normal) var(--bx-ease-step);
+}
+
+.bx-switch input:checked { background: var(--bx-primary); }
+.bx-switch input:checked::after { transform: translateX(1.4rem); }
+.bx-switch input:focus-visible { outline: 3px solid var(--bx-primary); outline-offset: 3px; }
+
+/* ---- range -------------------------------------------------------------- */
+
+.bx-range {
+    width: 100%;
+    height: 1.6rem;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.bx-range::-webkit-slider-runnable-track {
+    height: 0.9rem;
+    background: var(--bx-sunken);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+}
+.bx-range::-webkit-slider-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-top: -0.38rem;
+    background: var(--bx-primary);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+    box-shadow: 2px 2px 0 0 var(--bx-ink);
+    cursor: grab;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.bx-range::-moz-range-track {
+    height: 0.9rem;
+    background: var(--bx-sunken);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+}
+.bx-range::-moz-range-thumb {
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--bx-primary);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+    border-radius: 0;
+    cursor: grab;
+}
+
+/* ---- file and colour ---------------------------------------------------- */
+
+.bx-input[type="file"] { padding: 0.4em; }
+.bx-input[type="file"]::file-selector-button {
+    padding: 0.5em 1em;
+    margin-right: var(--bx-space-3);
+    background: var(--bx-ink);
+    color: var(--bx-paper);
+    border: 0;
+    font-family: var(--bx-font);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    cursor: pointer;
+}
+.bx-input[type="file"]::file-selector-button:hover { background: var(--bx-primary); color: var(--bx-primary-ink); }
+
+.bx-input[type="color"] { width: 4rem; height: 3rem; padding: 0.25rem; cursor: pointer; }
+.bx-input[type="color"]::-webkit-color-swatch { border: var(--bx-border-thin) solid var(--bx-ink); }
+.bx-input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+
+/* ---- validation --------------------------------------------------------- */
+
+.bx-input.bx-valid, .bx-select.bx-valid, .bx-textarea.bx-valid { box-shadow: inset 3px 3px 0 0 rgba(var(--bx-ink-rgb), 0.18), 0 0 0 3px var(--bx-success); }
+.bx-input.bx-invalid, .bx-select.bx-invalid, .bx-textarea.bx-invalid { box-shadow: inset 3px 3px 0 0 rgba(var(--bx-ink-rgb), 0.18), 0 0 0 3px var(--bx-danger); }
+
+.bx-feedback-ok, .bx-feedback-bad {
+    display: none;
+    margin-top: var(--bx-space-2);
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+}
+.bx-feedback-ok { color: var(--bx-success); }
+.bx-feedback-bad { color: var(--bx-danger); }
+.bx-valid ~ .bx-feedback-ok, .bx-invalid ~ .bx-feedback-bad { display: block; }
+
+/* ===========================================================================
+   24. ICONS
+   ---------------------------------------------------------------------------
+   Brutalix ships no icons and depends on none. These rules only size and align
+   an icon inside the components. They are written against AyCons, whose icons
+   are masks painted with currentColor — which is what lets an icon flip with
+   the theme instead of being a fixed-colour image. No emoji is used anywhere
+   in this framework or its documentation: an emoji is a font's opinion, and it
+   will not match a stark black outline on anybody's machine.
+   =========================================================================== */
+
+.bx-icon-xs { font-size: 0.75em; }
+.bx-icon-sm { font-size: 0.875em; }
+.bx-icon-lg { font-size: 1.25em; }
+.bx-icon-xl { font-size: 1.6em; }
+.bx-icon-2x { font-size: 2em; }
+.bx-icon-3x { font-size: 3em; }
+
+.bx-btn > .ay,
+.bx-nav-link > .ay,
+.bx-list-item > .ay,
+.bx-dropdown-item > .ay,
+.bx-alert > .ay { flex: none; }
+
+/* An icon in its own compartment. */
+.bx-icon-box {
+    --bx-icon-bg: var(--bx-accent);
+    --bx-icon-fg: var(--bx-accent-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    flex: none;
+    font-size: 1.4rem;
+    background: var(--bx-icon-bg);
+    color: var(--bx-icon-fg);
+    border: var(--bx-border);
+    border-radius: var(--bx-radius-sm);
+    box-shadow: var(--bx-shadow-sm);
+}
+
+.bx-icon-box-lg { width: 4rem; height: 4rem; font-size: 1.9rem; }
+.bx-icon-box-primary   { --bx-icon-bg: var(--bx-primary);   --bx-icon-fg: var(--bx-primary-ink); }
+.bx-icon-box-secondary { --bx-icon-bg: var(--bx-secondary); --bx-icon-fg: var(--bx-secondary-ink); }
+.bx-icon-box-success   { --bx-icon-bg: var(--bx-success);   --bx-icon-fg: var(--bx-success-ink); }
+.bx-icon-box-danger    { --bx-icon-bg: var(--bx-danger);    --bx-icon-fg: var(--bx-danger-ink); }
+.bx-icon-box-info      { --bx-icon-bg: var(--bx-info);      --bx-icon-fg: var(--bx-info-ink); }
+.bx-icon-box-violet    { --bx-icon-bg: var(--bx-violet);    --bx-icon-fg: var(--bx-violet-ink); }
+.bx-icon-box-hot       { --bx-icon-bg: var(--bx-hot);       --bx-icon-fg: var(--bx-hot-ink); }
+.bx-icon-box-ink       { --bx-icon-bg: var(--bx-ink);       --bx-icon-fg: var(--bx-paper); }
+
+/* ===========================================================================
+   24b. VIOLENT BACKGROUNDS  —  entirely optional
+   ---------------------------------------------------------------------------
+   Brutalism does not do gradients. These break that rule on purpose, and they
+   are opt-in for exactly that reason: nothing in the framework applies them
+   for you. Put one on a hero, a section, or <body>, and put your content in a
+   solid box on top of it.
+
+   Two warnings, and they are not decoration:
+
+     CONTRAST. Text placed directly on a moving gradient cannot be checked for
+     contrast, because the background is a different colour every frame. Always
+     put text inside a .bx-box, .bx-card or .bx-hero over these. The framework
+     will not stop you doing otherwise; it just will not be legible.
+
+     MOTION. Every animation here stops dead under prefers-reduced-motion, and
+     freezes on a static frame rather than disappearing. Some of these strobe,
+     and a strobe is a genuine hazard for photosensitive people — .bx-bg-strobe
+     and .bx-bg-slam are deliberately the slowest of the set for that reason.
+     Do not speed them up past about 5Hz.
+   =========================================================================== */
+
+[class*="bx-bg-riot"],
+[class*="bx-bg-melt"],
+[class*="bx-bg-warp"],
+[class*="bx-bg-strobe"],
+[class*="bx-bg-slam"],
+[class*="bx-bg-scan"],
+[class*="bx-bg-oil"],
+[class*="bx-bg-siren"] {
+    background-attachment: fixed;
+    isolation: isolate;
+}
+
+/* RIOT — a conic gradient of clashing accents, spun. The colours are hard
+   stops, so it reads as rotating blades rather than a smear. */
+.bx-bg-riot {
+    background: conic-gradient(from 0deg,
+        var(--bx-primary) 0deg 45deg,
+        var(--bx-accent) 45deg 90deg,
+        var(--bx-hot) 90deg 135deg,
+        var(--bx-info) 135deg 180deg,
+        var(--bx-secondary) 180deg 225deg,
+        var(--bx-acid) 225deg 270deg,
+        var(--bx-violet) 270deg 315deg,
+        var(--bx-danger) 315deg 360deg);
+    animation: bx-riot 6s linear infinite;
+}
+@keyframes bx-riot { to { --bx-riot-turn: 1turn; transform: rotate(0); filter: hue-rotate(360deg); } }
+
+/* MELT — four saturated radial blobs swimming over one another. This is the
+   softest of the set, and the only one that is genuinely smooth. */
+.bx-bg-melt {
+    background-color: var(--bx-primary);
+    background-image:
+        radial-gradient(60% 60% at 20% 20%, var(--bx-accent) 0%, transparent 60%),
+        radial-gradient(55% 55% at 80% 25%, var(--bx-hot) 0%, transparent 60%),
+        radial-gradient(65% 65% at 25% 85%, var(--bx-info) 0%, transparent 62%),
+        radial-gradient(50% 50% at 85% 80%, var(--bx-acid) 0%, transparent 58%);
+    background-size: 180% 180%, 160% 160%, 200% 200%, 170% 170%;
+    animation: bx-melt 14s ease-in-out infinite alternate;
+}
+@keyframes bx-melt {
+    0%   { background-position: 0% 0%, 100% 0%, 0% 100%, 100% 100%; }
+    50%  { background-position: 60% 40%, 20% 70%, 80% 10%, 10% 30%; }
+    100% { background-position: 100% 100%, 0% 100%, 100% 0%, 0% 0%; }
+}
+
+/* WARP — hard diagonal bars marching sideways. No blending at all: every stop
+   is doubled, so the edges stay knife-sharp. */
+.bx-bg-warp {
+    background-image: repeating-linear-gradient(45deg,
+        var(--bx-primary) 0 40px,
+        var(--bx-accent) 40px 80px,
+        var(--bx-hot) 80px 120px,
+        var(--bx-info) 120px 160px);
+    background-size: 226px 226px;
+    animation: bx-warp 2.5s linear infinite;
+}
+@keyframes bx-warp { to { background-position: 226px 0; } }
+
+/* SCAN — a bright band sweeping down over a flat accent, like a photocopier. */
+.bx-bg-scan {
+    background-color: var(--bx-ink);
+    background-image: linear-gradient(180deg,
+        transparent 0%, transparent 44%,
+        var(--bx-accent) 45%, var(--bx-accent) 55%,
+        transparent 56%, transparent 100%);
+    background-size: 100% 300%;
+    animation: bx-scan 3s linear infinite;
+}
+@keyframes bx-scan { from { background-position: 0 -100%; } to { background-position: 0 200%; } }
+
+/* OIL — a full-spectrum sweep with the hue rotated as well, so it never lands
+   on the same combination twice. The loudest of the set. */
+.bx-bg-oil {
+    background-image: linear-gradient(115deg,
+        var(--bx-primary), var(--bx-hot), var(--bx-accent),
+        var(--bx-acid), var(--bx-info), var(--bx-violet), var(--bx-primary));
+    background-size: 500% 500%;
+    animation: bx-oil 9s linear infinite, bx-oil-hue 5s linear infinite;
+}
+@keyframes bx-oil {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+@keyframes bx-oil-hue { to { filter: hue-rotate(360deg); } }
+
+/* SIREN — two colours rotating in hard halves. Emergency-vehicle logic. */
+.bx-bg-siren {
+    background-image: conic-gradient(from 0deg,
+        var(--bx-danger) 0deg 90deg,
+        var(--bx-info) 90deg 180deg,
+        var(--bx-danger) 180deg 270deg,
+        var(--bx-info) 270deg 360deg);
+    animation: bx-siren 1.6s steps(12, end) infinite;
+}
+@keyframes bx-siren { to { transform: rotate(360deg); } }
+
+/* STROBE — a full-field colour cut. Deliberately slow: this is the one that
+   can hurt people, so it changes about twice a second and no faster. */
+.bx-bg-strobe {
+    background-color: var(--bx-primary);
+    animation: bx-strobe 2s steps(1, end) infinite;
+}
+@keyframes bx-strobe {
+    0%   { background-color: var(--bx-primary); }
+    25%  { background-color: var(--bx-accent); }
+    50%  { background-color: var(--bx-hot); }
+    75%  { background-color: var(--bx-acid); }
+    100% { background-color: var(--bx-primary); }
+}
+
+/* SLAM — the whole field flips between two clashing halves, on the beat. */
+.bx-bg-slam {
+    background-image: linear-gradient(90deg,
+        var(--bx-primary) 0 50%, var(--bx-secondary) 50% 100%);
+    background-size: 200% 100%;
+    animation: bx-slam 1.8s steps(2, end) infinite;
+}
+@keyframes bx-slam { to { background-position: 200% 0; } }
+
+/* Speed control, so a background can be calmed without being replaced. */
+.bx-bg-slow  { animation-duration: 24s, 18s; }
+.bx-bg-fast  { animation-duration: 3s, 2s; }
+
+/* A grain layer, to keep a smooth gradient from looking like a smooth
+   gradient. Uses the hatch pattern rather than an image. */
+.bx-bg-grain { position: relative; }
+.bx-bg-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(0deg,
+        rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px);
+    mix-blend-mode: multiply;
+}
+.bx-bg-grain > * { position: relative; z-index: 1; }
+
+/* Every one of these stops on a still frame when asked. Not slowed — stopped. */
+@media (prefers-reduced-motion: reduce) {
+    .bx-bg-riot, .bx-bg-melt, .bx-bg-warp, .bx-bg-scan,
+    .bx-bg-oil, .bx-bg-siren, .bx-bg-strobe, .bx-bg-slam {
+        animation: none !important;
+    }
+}
+
+/* ---- a long table of contents -------------------------------------------
+   Scrolls inside the card rather than being the card, so the frame stays put
+   and only the list moves. brutalix.js keeps the active link inside it. */
+.bx-toc {
+    max-height: calc(100vh - 12rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.bx-toc .bx-nav-link {
+    justify-content: flex-start;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: var(--bx-text-sm);
+    font-weight: var(--bx-weight-bold);
+}
+
+/* ---- the skin picker ----------------------------------------------------
+   Built by brutalix.js into any empty [data-bx-skin-menu]. Styled here so it
+   is part of the framework rather than something each page reinvents. */
+
+.bx-skin-group + .bx-skin-group { margin-top: var(--bx-space-4); }
+
+.bx-skin-title {
+    margin: 0 0 var(--bx-space-2);
+    font-family: var(--bx-font-heading);
+    font-size: var(--bx-text-xs);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    color: var(--bx-muted);
+}
+
+.bx-skin-options { display: flex; flex-wrap: wrap; gap: var(--bx-space-2); }
+
+.bx-skin-option {
+    padding: 0.35em 0.75em;
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border: var(--bx-border-thin) solid var(--bx-ink);
+    border-radius: var(--bx-radius-sm);
+    font-family: var(--bx-font);
+    font-size: var(--bx-text-xs);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+    letter-spacing: var(--bx-tracking-wide);
+    cursor: pointer;
+    transition: background var(--bx-fast) var(--bx-ease), color var(--bx-fast) var(--bx-ease);
+}
+
+.bx-skin-option:hover { background: var(--bx-accent); color: var(--bx-accent-ink); }
+.bx-skin-option.bx-active { background: var(--bx-ink); color: var(--bx-paper); box-shadow: 2px 2px 0 0 var(--bx-primary); }
+
+/* ===========================================================================
+   25. UTILITIES
+   =========================================================================== */
+
+.bx-d-none { display: none; }
+.bx-d-block { display: block; }
+.bx-d-inline { display: inline; }
+.bx-d-inline-block { display: inline-block; }
+.bx-d-flex { display: flex; }
+.bx-d-inline-flex { display: inline-flex; }
+.bx-d-grid { display: grid; }
+
+.bx-flex-row { flex-direction: row; }
+.bx-flex-col { flex-direction: column; }
+.bx-flex-wrap { flex-wrap: wrap; }
+.bx-flex-nowrap { flex-wrap: nowrap; }
+.bx-flex-1 { flex: 1 1 0; }
+.bx-flex-auto { flex: 1 1 auto; }
+.bx-flex-none { flex: none; }
+.bx-justify-start { justify-content: flex-start; }
+.bx-justify-center { justify-content: center; }
+.bx-justify-end { justify-content: flex-end; }
+.bx-justify-between { justify-content: space-between; }
+.bx-justify-around { justify-content: space-around; }
+.bx-items-start { align-items: flex-start; }
+.bx-items-center { align-items: center; }
+.bx-items-end { align-items: flex-end; }
+.bx-items-stretch { align-items: stretch; }
+.bx-self-start { align-self: flex-start; }
+.bx-self-center { align-self: center; }
+.bx-self-end { align-self: flex-end; }
+
+.bx-gap-0 { gap: 0; }
+.bx-gap-1 { gap: var(--bx-space-1); }
+.bx-gap-2 { gap: var(--bx-space-2); }
+.bx-gap-3 { gap: var(--bx-space-3); }
+.bx-gap-4 { gap: var(--bx-space-4); }
+.bx-gap-5 { gap: var(--bx-space-5); }
+.bx-gap-6 { gap: var(--bx-space-6); }
+.bx-gap-8 { gap: var(--bx-space-8); }
+
+.bx-m-0 { margin: 0; }
+.bx-m-auto { margin: auto; }
+.bx-mx-auto { margin-left: auto; margin-right: auto; }
+.bx-ml-auto { margin-left: auto; }
+.bx-mr-auto { margin-right: auto; }
+.bx-mt-0 { margin-top: 0; } .bx-mt-1 { margin-top: var(--bx-space-1); }
+.bx-mt-2 { margin-top: var(--bx-space-2); } .bx-mt-3 { margin-top: var(--bx-space-3); }
+.bx-mt-4 { margin-top: var(--bx-space-4); } .bx-mt-5 { margin-top: var(--bx-space-5); }
+.bx-mt-6 { margin-top: var(--bx-space-6); } .bx-mt-8 { margin-top: var(--bx-space-8); }
+.bx-mt-10 { margin-top: var(--bx-space-10); }
+.bx-mb-0 { margin-bottom: 0; } .bx-mb-1 { margin-bottom: var(--bx-space-1); }
+.bx-mb-2 { margin-bottom: var(--bx-space-2); } .bx-mb-3 { margin-bottom: var(--bx-space-3); }
+.bx-mb-4 { margin-bottom: var(--bx-space-4); } .bx-mb-5 { margin-bottom: var(--bx-space-5); }
+.bx-mb-6 { margin-bottom: var(--bx-space-6); } .bx-mb-8 { margin-bottom: var(--bx-space-8); }
+.bx-mb-10 { margin-bottom: var(--bx-space-10); } .bx-mb-12 { margin-bottom: var(--bx-space-12); }
+
+.bx-p-0 { padding: 0; } .bx-p-2 { padding: var(--bx-space-2); }
+.bx-p-3 { padding: var(--bx-space-3); } .bx-p-4 { padding: var(--bx-space-4); }
+.bx-p-5 { padding: var(--bx-space-5); } .bx-p-6 { padding: var(--bx-space-6); }
+.bx-p-8 { padding: var(--bx-space-8); }
+.bx-px-3 { padding-left: var(--bx-space-3); padding-right: var(--bx-space-3); }
+.bx-px-4 { padding-left: var(--bx-space-4); padding-right: var(--bx-space-4); }
+.bx-px-5 { padding-left: var(--bx-space-5); padding-right: var(--bx-space-5); }
+.bx-py-2 { padding-top: var(--bx-space-2); padding-bottom: var(--bx-space-2); }
+.bx-py-4 { padding-top: var(--bx-space-4); padding-bottom: var(--bx-space-4); }
+.bx-py-6 { padding-top: var(--bx-space-6); padding-bottom: var(--bx-space-6); }
+.bx-py-8 { padding-top: var(--bx-space-8); padding-bottom: var(--bx-space-8); }
+.bx-py-10 { padding-top: var(--bx-space-10); padding-bottom: var(--bx-space-10); }
+.bx-py-12 { padding-top: var(--bx-space-12); padding-bottom: var(--bx-space-12); }
+
+.bx-w-full { width: 100%; }
+.bx-w-auto { width: auto; }
+.bx-h-full { height: 100%; }
+.bx-min-h-screen { min-height: 100vh; }
+.bx-max-w-sm { max-width: 26rem; }
+.bx-max-w-md { max-width: 34rem; }
+.bx-max-w-lg { max-width: 44rem; }
+.bx-max-w-xl { max-width: 56rem; }
+
+.bx-relative { position: relative; }
+.bx-absolute { position: absolute; }
+.bx-fixed { position: fixed; }
+.bx-sticky { position: sticky; top: 6rem; z-index: var(--bx-z-sticky); }
+.bx-inset-0 { inset: 0; }
+
+.bx-text-left { text-align: left; }
+.bx-text-center { text-align: center; }
+.bx-text-right { text-align: right; }
+.bx-uppercase { text-transform: uppercase; }
+.bx-lowercase { text-transform: lowercase; }
+.bx-nowrap { white-space: nowrap; }
+.bx-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bx-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bx-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.bx-break { overflow-wrap: break-word; word-break: break-word; }
+
+.bx-fw-normal { font-weight: var(--bx-weight-normal); }
+.bx-fw-bold { font-weight: var(--bx-weight-bold); }
+.bx-fw-black { font-weight: var(--bx-weight-black); }
+.bx-mono { font-family: var(--bx-font-code); }
+.bx-heading-font { font-family: var(--bx-font-heading); }
+.bx-tracking-wide { letter-spacing: var(--bx-tracking-wide); }
+.bx-tracking-tight { letter-spacing: var(--bx-tracking-tight); }
+.bx-leading-tight { line-height: var(--bx-leading-tight); }
+
+.bx-text-xs { font-size: var(--bx-text-xs); }
+.bx-text-sm { font-size: var(--bx-text-sm); }
+.bx-text-md { font-size: var(--bx-text-md); }
+.bx-text-lg { font-size: var(--bx-text-lg); }
+.bx-text-xl { font-size: var(--bx-text-xl); }
+.bx-text-2xl { font-size: var(--bx-text-2xl); }
+.bx-text-3xl { font-size: var(--bx-text-3xl); }
+.bx-text-4xl { font-size: var(--bx-text-4xl); }
+
+.bx-fg-primary { color: var(--bx-primary); }
+.bx-fg-secondary { color: var(--bx-secondary); }
+.bx-fg-success { color: var(--bx-success); }
+.bx-fg-danger { color: var(--bx-danger); }
+.bx-fg-warning { color: var(--bx-warning); }
+.bx-fg-info { color: var(--bx-info); }
+.bx-fg-violet { color: var(--bx-violet); }
+.bx-fg-hot { color: var(--bx-hot); }
+.bx-fg-muted { color: var(--bx-muted); }
+.bx-fg-ink { color: var(--bx-ink); }
+.bx-fg-paper { color: var(--bx-paper); }
+
+.bx-bg-paper { background: var(--bx-paper); }
+.bx-bg-surface { background: var(--bx-surface); }
+.bx-bg-sunken { background: var(--bx-sunken); }
+.bx-bg-ink { background: var(--bx-ink); color: var(--bx-paper); }
+.bx-bg-primary { background: var(--bx-primary); color: var(--bx-primary-ink); }
+.bx-bg-secondary { background: var(--bx-secondary); color: var(--bx-secondary-ink); }
+.bx-bg-accent { background: var(--bx-accent); color: var(--bx-accent-ink); }
+.bx-bg-success { background: var(--bx-success); color: var(--bx-success-ink); }
+.bx-bg-danger { background: var(--bx-danger); color: var(--bx-danger-ink); }
+.bx-bg-warning { background: var(--bx-warning); color: var(--bx-warning-ink); }
+.bx-bg-info { background: var(--bx-info); color: var(--bx-info-ink); }
+.bx-bg-violet { background: var(--bx-violet); color: var(--bx-violet-ink); }
+.bx-bg-hot { background: var(--bx-hot); color: var(--bx-hot-ink); }
+.bx-bg-acid { background: var(--bx-acid); color: var(--bx-acid-ink); }
+.bx-bg-none { background: transparent; }
+
+.bx-border { border: var(--bx-border); }
+.bx-border-thin { border: var(--bx-border-thin) solid var(--bx-ink); }
+.bx-border-thick { border: var(--bx-border-thick) solid var(--bx-ink); }
+.bx-border-slab { border: var(--bx-border-slab) solid var(--bx-ink); }
+.bx-border-0 { border: 0; }
+.bx-border-t { border-top: var(--bx-border); }
+.bx-border-b { border-bottom: var(--bx-border); }
+.bx-border-l { border-left: var(--bx-border); }
+.bx-border-r { border-right: var(--bx-border); }
+.bx-border-dashed { border-style: dashed; }
+.bx-border-primary { border-color: var(--bx-primary); }
+.bx-border-danger { border-color: var(--bx-danger); }
+
+.bx-radius-0 { border-radius: 0; }
+.bx-radius { border-radius: var(--bx-radius); }
+.bx-radius-lg { border-radius: var(--bx-radius-lg); }
+.bx-radius-pill { border-radius: 999px; }
+
+.bx-overflow-hidden { overflow: hidden; }
+.bx-overflow-auto { overflow: auto; }
+.bx-cursor-pointer { cursor: pointer; }
+.bx-select-none { user-select: none; }
+.bx-pointer-none { pointer-events: none; }
+.bx-opacity-50 { opacity: 0.5; }
+.bx-opacity-100 { opacity: 1; }
+
+.bx-sr-only {
+    position: absolute !important;
+    width: 1px !important; height: 1px !important;
+    padding: 0 !important; margin: -1px !important;
+    overflow: hidden !important; clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important; border: 0 !important;
+}
+
+.bx-skip {
+    position: absolute;
+    left: -9999px;
+    z-index: 9999;
+}
+.bx-skip:focus {
+    left: var(--bx-space-4);
+    top: var(--bx-space-4);
+    padding: var(--bx-space-3) var(--bx-space-5);
+    background: var(--bx-accent);
+    color: var(--bx-accent-ink);
+    border: var(--bx-border);
+    box-shadow: var(--bx-shadow);
+    font-weight: var(--bx-weight-black);
+    text-transform: uppercase;
+}
+
+@media (min-width: 576px) { .bx-sm-block { display: block; } .bx-sm-flex { display: flex; } .bx-sm-none { display: none; } }
+@media (min-width: 768px) { .bx-md-block { display: block; } .bx-md-flex { display: flex; } .bx-md-none { display: none; } }
+@media (min-width: 992px) { .bx-lg-block { display: block; } .bx-lg-flex { display: flex; } .bx-lg-none { display: none; } }
+@media (max-width: 767px) { .bx-md-down-none { display: none; } .bx-md-down-block { display: block; } }
+
+@keyframes bx-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* ===========================================================================
+   17. POPOVER AND HOVER CARD
+   ---------------------------------------------------------------------------
+   A tooltip is a label. A popover holds markup — a heading, a paragraph, a
+   button — so it is a real element rather than a pseudo-element, and the
+   script places it.
+   =========================================================================== */
+
+.bx-popover {
+    position: absolute;
+    z-index: var(--bx-z-popover);
+    width: max-content;
+    max-width: min(22rem, calc(100vw - 2rem));
+    padding: var(--bx-space-4);
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border: var(--bx-border-width) solid var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: opacity var(--bx-fast) var(--bx-ease),
+                transform var(--bx-fast) var(--bx-ease),
+                visibility var(--bx-fast);
+}
+.bx-popover.bx-open { opacity: 1; visibility: visible; transform: none; }
+.bx-popover-title { margin: 0 0 var(--bx-space-2); font-size: var(--bx-text-md); font-weight: 700; }
+.bx-popover-body > :last-child { margin-bottom: 0; }
+.bx-popover-arrow {
+    position: absolute;
+    width: 10px; height: 10px;
+    background: var(--bx-surface);
+    border: var(--bx-border-width) solid var(--bx-border);
+    transform: rotate(45deg);
+}
+
+/* The hover card is the same box opened by dwelling rather than clicking, so
+   it needs no script at all. */
+.bx-hovercard-anchor { position: relative; display: inline-flex; }
+.bx-hovercard {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    z-index: var(--bx-z-popover);
+    width: max-content;
+    max-width: 20rem;
+    padding: var(--bx-space-4);
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border: var(--bx-border-width) solid var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--bx-normal) var(--bx-ease), visibility var(--bx-normal);
+}
+.bx-hovercard-anchor:hover .bx-hovercard,
+.bx-hovercard-anchor:focus-within .bx-hovercard { opacity: 1; visibility: visible; }
+
+/* ===========================================================================
+   18. COMBOBOX / AUTOCOMPLETE
+   =========================================================================== */
+
+.bx-combobox { position: relative; }
+.bx-combobox-list {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    left: 0; right: 0;
+    z-index: var(--bx-z-popover);
+    max-height: 16rem;
+    overflow-y: auto;
+    padding: var(--bx-space-1);
+    background: var(--bx-surface);
+    border: var(--bx-border-width) solid var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    display: none;
+}
+.bx-combobox.bx-open .bx-combobox-list { display: block; }
+.bx-combobox-option {
+    display: flex;
+    align-items: center;
+    gap: var(--bx-space-3);
+    padding: var(--bx-space-2) var(--bx-space-3);
+    border-radius: var(--bx-radius-sm);
+    font-size: var(--bx-text-sm);
+    cursor: pointer;
+}
+.bx-combobox-option:hover,
+.bx-combobox-option.bx-active { background: var(--bx-paper); }
+.bx-combobox-option[aria-selected="true"] { background: var(--bx-primary); color: var(--bx-primary-ink); }
+.bx-combobox-empty { padding: var(--bx-space-3); font-size: var(--bx-text-sm); color: var(--bx-muted); }
+.bx-combobox-tokens { display: flex; flex-wrap: wrap; gap: var(--bx-space-2); margin-bottom: var(--bx-space-2); }
+
+/* ===========================================================================
+   19. CALENDAR AND DATE PICKER
+   ---------------------------------------------------------------------------
+   One grid, two uses: the picker is the calendar in a popover with smaller
+   cells. Nothing about the month maths lives in CSS.
+   =========================================================================== */
+
+.bx-calendar {
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border: var(--bx-border-width) solid var(--bx-border);
+    border-radius: var(--bx-radius);
+    overflow: hidden;
+}
+.bx-calendar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bx-space-3);
+    padding: var(--bx-space-3) var(--bx-space-4);
+    border-bottom: var(--bx-border-width) solid var(--bx-border);
+}
+.bx-calendar-title { font-family: var(--bx-font-heading); font-weight: 700; }
+.bx-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.bx-calendar-dow {
+    padding: var(--bx-space-2) 0;
+    text-align: center;
+    font-size: var(--bx-text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--bx-muted);
+    background: var(--bx-paper);
+}
+.bx-calendar-day {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 5.5rem;
+    padding: var(--bx-space-2);
+    background: none;
+    border: 0;
+    border-top: var(--bx-border-width) solid var(--bx-border);
+    border-right: var(--bx-border-width) solid var(--bx-border);
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+    transition: background-color var(--bx-fast) var(--bx-ease);
+}
+.bx-calendar-day:nth-child(7n) { border-right: 0; }
+.bx-calendar-day:hover { background: var(--bx-paper); }
+.bx-calendar-day.bx-outside { color: var(--bx-muted); opacity: 0.55; }
+.bx-calendar-day.bx-today .bx-calendar-num {
+    background: var(--bx-primary);
+    color: var(--bx-primary-ink);
+    border-radius: var(--bx-radius-pill);
+}
+.bx-calendar-day.bx-selected { background: color-mix(in srgb, var(--bx-primary) 14%, transparent); }
+.bx-calendar-day[disabled] { opacity: 0.35; cursor: not-allowed; }
+.bx-calendar-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.6rem;
+    height: 1.6rem;
+    font-size: var(--bx-text-sm);
+    font-weight: 600;
+}
+.bx-calendar-event {
+    display: block;
+    padding: 1px var(--bx-space-2);
+    background: var(--bx-secondary);
+    color: var(--bx-secondary-ink);
+    border-radius: var(--bx-radius-sm);
+    font-size: var(--bx-text-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bx-calendar-event-accent { background: var(--bx-accent); color: var(--bx-accent-ink); }
+.bx-calendar-event-danger { background: var(--bx-danger); color: var(--bx-danger-ink); }
+
+/* The picker: the same grid, shrunk to a popover. */
+.bx-datepicker { position: relative; }
+.bx-datepicker-pop {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    left: 0;
+    z-index: var(--bx-z-popover);
+    width: 19rem;
+    background: var(--bx-surface);
+    border: var(--bx-border-width) solid var(--bx-border);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow);
+    display: none;
+}
+.bx-datepicker.bx-open .bx-datepicker-pop { display: block; }
+.bx-datepicker-pop .bx-calendar { border: 0; }
+.bx-datepicker-pop .bx-calendar-day { min-height: 0; padding: 0; align-items: center; justify-content: center; }
+.bx-datepicker-pop .bx-calendar-num { width: 100%; height: 2.2rem; }
+.bx-datepicker-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bx-space-2);
+    padding: var(--bx-space-3);
+    border-top: var(--bx-border-width) solid var(--bx-border);
+}
+.bx-timefield { display: flex; align-items: center; gap: var(--bx-space-2); }
+.bx-timefield input {
+    width: 3.4rem;
+    padding: var(--bx-space-2);
+    text-align: center;
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border: var(--bx-border-width) solid var(--bx-ink);
+    border-radius: var(--bx-radius-sm);
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ===========================================================================
+   20. DATA TABLE — sort, filter, select, paginate
+   =========================================================================== */
+
+.bx-datatable-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--bx-space-3);
+    padding: var(--bx-space-3) var(--bx-space-4);
+    background: var(--bx-paper);
+    border: var(--bx-border-width) solid var(--bx-border);
+    border-bottom: 0;
+    border-radius: var(--bx-radius) var(--bx-radius) 0 0;
+}
+.bx-datatable-bar + .bx-table-wrap { border-radius: 0 0 var(--bx-radius) var(--bx-radius); }
+.bx-datatable-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bx-space-3);
+    padding: var(--bx-space-3) var(--bx-space-4);
+    background: var(--bx-paper);
+    border: var(--bx-border-width) solid var(--bx-border);
+    border-top: 0;
+    border-radius: 0 0 var(--bx-radius) var(--bx-radius);
+    font-size: var(--bx-text-sm);
+}
+.bx-datatable-bar + .bx-table-wrap:has(+ .bx-datatable-foot) { border-radius: 0; }
+
+.bx-table th[data-bx-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
+.bx-table th[data-bx-sort]:hover { color: var(--bx-ink); }
+.bx-table th[data-bx-sort]::after {
+    content: "";
+    display: inline-block;
+    width: 0; height: 0;
+    margin-left: var(--bx-space-2);
+    vertical-align: middle;
+    border-inline: 4px solid transparent;
+    border-bottom: 5px solid currentColor;
+    opacity: 0.25;
+}
+.bx-table th[aria-sort="ascending"]::after { opacity: 1; }
+.bx-table th[aria-sort="descending"]::after {
+    opacity: 1;
+    border-bottom: 0;
+    border-top: 5px solid currentColor;
+}
+.bx-table-numeric { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ===========================================================================
+   21. COMMAND PALETTE
+   =========================================================================== */
+
+.bx-palette {
+    position: fixed;
+    inset: 0;
+    z-index: var(--bx-z-modal);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 10vh var(--bx-gutter) var(--bx-gutter);
+}
+.bx-palette.bx-open { display: flex; }
+.bx-palette-panel {
+    width: min(38rem, 100%);
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow-lg);
+    overflow: hidden;
+    animation: bx-rise var(--bx-normal) var(--bx-ease);
+}
+.bx-palette-input {
+    display: flex;
+    align-items: center;
+    gap: var(--bx-space-3);
+    padding: var(--bx-space-4);
+    border-bottom: var(--bx-border-width) solid var(--bx-border);
+}
+.bx-palette-input input {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: none;
+    border: 0;
+    font: inherit;
+    font-size: var(--bx-text-lg);
+    color: inherit;
+}
+.bx-palette-input input:focus { outline: none; }
+.bx-palette-list { flex: 1 1 auto; overflow-y: auto; padding: var(--bx-space-2); }
+.bx-palette-group {
+    padding: var(--bx-space-3) var(--bx-space-3) var(--bx-space-1);
+    font-size: var(--bx-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--bx-muted);
+}
+.bx-palette-item {
+    display: flex;
+    align-items: center;
+    gap: var(--bx-space-3);
+    width: 100%;
+    padding: var(--bx-space-3);
+    background: none;
+    border: 0;
+    border-radius: var(--bx-radius-sm);
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+}
+.bx-palette-item:hover, .bx-palette-item.bx-active { background: var(--bx-paper); }
+.bx-palette-item.bx-active { box-shadow: inset 3px 0 0 var(--bx-primary); }
+.bx-palette-label { flex: 1 1 auto; min-width: 0; }
+.bx-palette-hint { font-size: var(--bx-text-xs); color: var(--bx-muted); }
+.bx-palette-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--bx-space-4);
+    padding: var(--bx-space-3) var(--bx-space-4);
+    border-top: var(--bx-border-width) solid var(--bx-border);
+    background: var(--bx-paper);
+    font-size: var(--bx-text-xs);
+    color: var(--bx-muted);
+}
+
+/* ===========================================================================
+   22. TREE VIEW
+   =========================================================================== */
+
+.bx-tree, .bx-tree ul { list-style: none; margin: 0; padding: 0; }
+.bx-tree ul { margin-left: 1.1rem; border-left: var(--bx-border-width) solid var(--bx-border); }
+.bx-tree-row {
+    display: flex;
+    align-items: center;
+    gap: var(--bx-space-2);
+    width: 100%;
+    padding: var(--bx-space-2) var(--bx-space-3);
+    background: none;
+    border: 0;
+    border-radius: var(--bx-radius-sm);
+    font: inherit;
+    font-size: var(--bx-text-sm);
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+}
+.bx-tree-row:hover { background: var(--bx-paper); }
+.bx-tree-row.bx-selected { background: var(--bx-primary); color: var(--bx-primary-ink); }
+.bx-tree-twist {
+    display: inline-flex;
+    width: 1rem;
+    flex: 0 0 auto;
+    transition: transform var(--bx-fast) var(--bx-ease);
+}
+.bx-tree-item.bx-open > .bx-tree-row .bx-tree-twist { transform: rotate(90deg); }
+.bx-tree-item > ul { display: none; }
+.bx-tree-item.bx-open > ul { display: block; }
+.bx-tree-leaf .bx-tree-twist { visibility: hidden; }
+.bx-tree-count { margin-left: auto; font-size: var(--bx-text-xs); color: var(--bx-muted); }
+.bx-tree-row.bx-selected .bx-tree-count { color: inherit; opacity: 0.8; }
+
+/* ===========================================================================
+   23. SPLIT PANES
+   ---------------------------------------------------------------------------
+   Named .bx-panes rather than .bx-split, which is already the space-between
+   row. Two panes and a divider the script drags; the size lives in a variable
+   so a layout can set its own starting split without touching the component.
+   =========================================================================== */
+
+.bx-panes {
+    display: grid;
+    grid-template-columns: var(--bx-pane, 50%) auto minmax(0, 1fr);
+    min-height: 16rem;
+    border: var(--bx-border-width) solid var(--bx-border);
+    border-radius: var(--bx-radius);
+    overflow: hidden;
+}
+.bx-panes-v { grid-template-columns: none; grid-template-rows: var(--bx-pane, 50%) auto minmax(0, 1fr); }
+.bx-pane { min-width: 0; min-height: 0; overflow: auto; padding: var(--bx-space-4); }
+.bx-panes-divider {
+    position: relative;
+    width: 5px;
+    background: var(--bx-border);
+    cursor: col-resize;
+    touch-action: none;
+    transition: background-color var(--bx-fast) var(--bx-ease);
+}
+.bx-panes-v > .bx-panes-divider { width: auto; height: 5px; cursor: row-resize; }
+.bx-panes-divider:hover, .bx-panes-divider.bx-dragging { background: var(--bx-primary); }
+.bx-panes-divider::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+}
+
+/* ===========================================================================
+   24. RATING
+   =========================================================================== */
+
+.bx-rating { display: inline-flex; align-items: center; gap: 2px; }
+.bx-rating-star {
+    display: inline-flex;
+    padding: 0 1px;
+    background: none;
+    border: 0;
+    color: var(--bx-ink);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color var(--bx-fast) var(--bx-ease), transform var(--bx-fast) var(--bx-ease);
+}
+.bx-rating-star.bx-on { color: var(--bx-warning); }
+.bx-rating:hover .bx-rating-star { color: var(--bx-ink); }
+.bx-rating-star:hover, .bx-rating-star:hover ~ .bx-rating-star { color: var(--bx-ink); }
+/* Hovering one star lights it and everything before it — which, with the row
+   in source order, means lighting the hovered star and its previous siblings.
+   CSS has no previous-sibling selector, so the row is reversed in the flexbox
+   and the DOM keeps its natural order for the keyboard. */
+.bx-rating-hover { flex-direction: row-reverse; }
+.bx-rating-hover .bx-rating-star:hover,
+.bx-rating-hover .bx-rating-star:hover ~ .bx-rating-star { color: var(--bx-warning); }
+.bx-rating-value { margin-left: var(--bx-space-2); font-size: var(--bx-text-sm); color: var(--bx-muted); }
+.bx-rating-readonly .bx-rating-star { cursor: default; pointer-events: none; }
+.bx-rating-lg .bx-rating-star { font-size: 1.75rem; }
+.bx-rating-sm .bx-rating-star { font-size: 1rem; }
+
+/* ===========================================================================
+   25. KANBAN
+   =========================================================================== */
+
+.bx-kanban {
+    display: flex;
+    gap: var(--bx-space-4);
+    overflow-x: auto;
+    padding-bottom: var(--bx-space-3);
+    align-items: flex-start;
+}
+.bx-kanban-col {
+    flex: 0 0 18rem;
+    display: flex;
+    flex-direction: column;
+    max-height: 34rem;
+    background: var(--bx-paper);
+    border-radius: var(--bx-radius);
+}
+.bx-kanban-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--bx-space-2);
+    padding: var(--bx-space-3) var(--bx-space-4);
+    border-bottom: var(--bx-border-width) solid var(--bx-border);
+    font-weight: 700;
+    font-size: var(--bx-text-sm);
+}
+.bx-kanban-count {
+    min-width: 1.5rem;
+    padding: 0 0.35em;
+    background: var(--bx-sunken);
+    border-radius: var(--bx-radius-pill);
+    text-align: center;
+    font-size: var(--bx-text-xs);
+}
+.bx-kanban-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: var(--bx-space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--bx-space-3);
+    min-height: 4rem;
+}
+.bx-kanban-list.bx-over { background: color-mix(in srgb, var(--bx-primary) 10%, transparent); }
+.bx-kanban-card {
+    padding: var(--bx-space-3) var(--bx-space-4);
+    background: var(--bx-surface);
+    border-radius: var(--bx-radius-sm);
+    border-left: 3px solid var(--bx-primary);
+    cursor: grab;
+    box-shadow: var(--bx-shadow);
+}
+.bx-kanban-card:active { cursor: grabbing; }
+.bx-kanban-card.bx-dragging { opacity: 0.45; }
+.bx-kanban-card-title { font-weight: 600; font-size: var(--bx-text-sm); }
+.bx-kanban-card-meta { display: flex; align-items: center; gap: var(--bx-space-2); margin-top: var(--bx-space-2); font-size: var(--bx-text-xs); color: var(--bx-muted); }
+.bx-kanban-card-secondary { border-left-color: var(--bx-secondary); }
+.bx-kanban-card-accent { border-left-color: var(--bx-accent); }
+.bx-kanban-card-danger { border-left-color: var(--bx-danger); }
+
+/* ===========================================================================
+   26. TOUR / COACHMARKS
+   ---------------------------------------------------------------------------
+   The spotlight is one enormous box-shadow spread from a transparent box: the
+   cut-out is the box itself, and everything outside it is the shadow. That is
+   cheaper and sharper than four overlay rectangles, and it follows a border
+   radius for free.
+   =========================================================================== */
+
+.bx-tour-spot {
+    position: absolute;
+    z-index: var(--bx-z-drawer);
+    border-radius: var(--bx-radius);
+    box-shadow: 0 0 0 9999px color-mix(in srgb, var(--bx-ink) 62%, transparent);
+    pointer-events: none;
+    transition: all var(--bx-normal) var(--bx-ease);
+}
+.bx-tour-pop {
+    position: absolute;
+    z-index: var(--bx-z-modal);
+    width: min(22rem, calc(100vw - 2rem));
+    padding: var(--bx-space-5);
+    background: var(--bx-surface);
+    color: var(--bx-ink);
+    border-radius: var(--bx-radius);
+    box-shadow: var(--bx-shadow-lg);
+}
+.bx-tour-step { font-size: var(--bx-text-xs); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bx-primary); }
+.bx-tour-title { margin: var(--bx-space-2) 0; font-size: var(--bx-text-lg); }
+.bx-tour-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--bx-space-3); margin-top: var(--bx-space-4); }
+.bx-tour-dots { display: flex; gap: 4px; }
+.bx-tour-dot { width: 6px; height: 6px; background: var(--bx-ink); border-radius: 50%; }
+.bx-tour-dot.bx-on { background: var(--bx-primary); }
+
+/* ===========================================================================
+   27. TOOLBAR
+   =========================================================================== */
+
+.bx-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--bx-space-1);
+    padding: var(--bx-space-2);
+    background: var(--bx-surface);
+    border: var(--bx-border-width) solid var(--bx-border);
+    border-radius: var(--bx-radius);
+}
+.bx-toolbar-group { display: flex; align-items: center; gap: 1px; }
+.bx-toolbar-sep { width: var(--bx-border-width); align-self: stretch; margin-inline: var(--bx-space-2); background: var(--bx-border); }
+.bx-toolbar-spacer { flex: 1 1 auto; }
+.bx-toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--bx-space-2);
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 var(--bx-space-2);
+    background: none;
+    border: 0;
+    border-radius: var(--bx-radius-sm);
+    font: inherit;
+    font-size: var(--bx-text-sm);
+    color: inherit;
+    cursor: pointer;
+    transition: background-color var(--bx-fast) var(--bx-ease);
+}
+.bx-toolbar-btn:hover { background: var(--bx-paper); }
+.bx-toolbar-btn.bx-active { background: var(--bx-primary); color: var(--bx-primary-ink); }
+.bx-toolbar-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+.bx-toolbar-vertical { flex-direction: column; align-items: stretch; width: max-content; }
+.bx-toolbar-vertical .bx-toolbar-sep { width: auto; height: var(--bx-border-width); margin: var(--bx-space-2) 0; }
+
+/* ===========================================================================
+   28. THE REST OF THE PARITY SET
+   =========================================================================== */
+
+/* -- floating label -------------------------------------------------------- */
+.bx-float { position: relative; }
+.bx-float .bx-input, .bx-float .bx-textarea {
+    padding-top: calc(var(--bx-space-2) + 0.55rem);
+    padding-bottom: calc(var(--bx-space-2) - 0.15rem);
+}
+.bx-float .bx-label {
+    position: absolute;
+    top: 0.55rem;
+    left: var(--bx-space-3);
+    margin: 0;
+    font-size: var(--bx-text-xs);
+    color: var(--bx-muted);
+    pointer-events: none;
+    transition: top var(--bx-fast) var(--bx-ease), font-size var(--bx-fast) var(--bx-ease);
+}
+/* :placeholder-shown is the detector, so every floating field needs a
+   placeholder — even an empty one. */
+.bx-float .bx-input:placeholder-shown:not(:focus) + .bx-label,
+.bx-float .bx-textarea:placeholder-shown:not(:focus) + .bx-label {
+    top: calc(var(--bx-space-2) + 0.1rem);
+    font-size: var(--bx-text-md);
+}
+
+/* -- close button ---------------------------------------------------------- */
+.bx-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem; height: 1.75rem;
+    flex: 0 0 auto;
+    background: none;
+    border: 0;
+    border-radius: var(--bx-radius-sm);
+    color: inherit;
+    opacity: 0.6;
+    cursor: pointer;
+    transition: opacity var(--bx-fast) var(--bx-ease), background-color var(--bx-fast) var(--bx-ease);
+}
+.bx-close:hover { opacity: 1; background: color-mix(in srgb, currentColor 12%, transparent); }
+
+/* -- media object ---------------------------------------------------------- */
+.bx-media { display: flex; align-items: flex-start; gap: var(--bx-space-4); }
+.bx-media-figure { flex: 0 0 auto; }
+.bx-media-body { flex: 1 1 auto; min-width: 0; }
+.bx-media-body > :last-child { margin-bottom: 0; }
+
+/* -- chat bubble ----------------------------------------------------------- */
+.bx-chat { display: flex; gap: var(--bx-space-3); margin-bottom: var(--bx-space-4); }
+.bx-chat-end { flex-direction: row-reverse; }
+.bx-chat-bubble {
+    max-width: min(34rem, 78%);
+    padding: var(--bx-space-3) var(--bx-space-4);
+    background: var(--bx-sunken);
+    color: var(--bx-ink);
+    border-radius: var(--bx-radius-lg);
+}
+.bx-chat-end .bx-chat-bubble { background: var(--bx-primary); color: var(--bx-primary-ink); }
+.bx-chat-meta { margin-top: var(--bx-space-1); font-size: var(--bx-text-xs); color: var(--bx-muted); }
+.bx-chat-end .bx-chat-meta { text-align: right; }
+
+/* -- countdown ------------------------------------------------------------- */
+.bx-countdown { display: inline-flex; gap: var(--bx-space-3); font-variant-numeric: tabular-nums; }
+.bx-countdown-part { display: flex; flex-direction: column; align-items: center; }
+.bx-countdown-num {
+    min-width: 3rem;
+    padding: var(--bx-space-2);
+    background: var(--bx-sunken);
+    color: var(--bx-ink);
+    border-radius: var(--bx-radius);
+    font-family: var(--bx-font-heading);
+    font-size: var(--bx-text-2xl);
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.1;
+}
+.bx-countdown-label { margin-top: var(--bx-space-1); font-size: var(--bx-text-xs); color: var(--bx-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* -- radial progress ------------------------------------------------------
+   A conic gradient for the arc and a knocked-out centre. One variable drives
+   it, so the script only has to set --bx-value. */
+.bx-radial {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: var(--bx-radial-size, 5rem);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+        radial-gradient(farthest-side, var(--bx-surface) 79%, transparent 80% 100%),
+        conic-gradient(var(--bx-primary) calc(var(--bx-value, 0) * 1%), var(--bx-sunken) 0);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.bx-radial-success { background: radial-gradient(farthest-side, var(--bx-surface) 79%, transparent 80% 100%), conic-gradient(var(--bx-success) calc(var(--bx-value, 0) * 1%), var(--bx-sunken) 0); }
+.bx-radial-danger { background: radial-gradient(farthest-side, var(--bx-surface) 79%, transparent 80% 100%), conic-gradient(var(--bx-danger) calc(var(--bx-value, 0) * 1%), var(--bx-sunken) 0); }
+.bx-radial-lg { --bx-radial-size: 7.5rem; font-size: var(--bx-text-xl); }
+.bx-radial-sm { --bx-radial-size: 3.25rem; font-size: var(--bx-text-xs); }
+
+/* -- indicator ------------------------------------------------------------- */
+.bx-indicator { position: relative; display: inline-flex; }
+.bx-indicator-item { position: absolute; top: 0; right: 0; transform: translate(35%, -35%); }
+.bx-indicator-bottom .bx-indicator-item { top: auto; bottom: 0; transform: translate(35%, 35%); }
+.bx-indicator-start .bx-indicator-item { right: auto; left: 0; transform: translate(-35%, -35%); }
+
+/* -- swap: two glyphs, one toggle ------------------------------------------ */
+.bx-swap { position: relative; display: inline-grid; place-items: center; cursor: pointer; }
+.bx-swap > * { grid-area: 1 / 1; transition: opacity var(--bx-fast) var(--bx-ease), transform var(--bx-normal) var(--bx-ease); }
+.bx-swap-off { opacity: 1; }
+.bx-swap-on { opacity: 0; }
+.bx-swap.bx-active .bx-swap-off { opacity: 0; transform: rotate(-45deg); }
+.bx-swap.bx-active .bx-swap-on { opacity: 1; }
+
+/* -- dock: the bottom bar for narrow windows ------------------------------- */
+.bx-dock {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: var(--bx-z-navbar);
+    display: flex;
+    background: var(--bx-surface);
+    border-top: var(--bx-border-width) solid var(--bx-border);
+}
+.bx-dock-item {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: var(--bx-space-2) var(--bx-space-1);
+    background: none;
+    border: 0;
+    font-size: var(--bx-text-xs);
+    color: var(--bx-muted);
+    text-decoration: none;
+    cursor: pointer;
+}
+.bx-dock-item .ay { font-size: 1.25rem; }
+.bx-dock-item.bx-active { color: var(--bx-primary); box-shadow: inset 0 3px 0 var(--bx-primary); }
+
+/* -- segmented control ----------------------------------------------------- */
+.bx-segmented {
+    display: inline-flex;
+    padding: 3px;
+    background: var(--bx-sunken);
+    border-radius: var(--bx-radius);
+}
+.bx-segment {
+    padding: var(--bx-space-2) var(--bx-space-4);
+    background: none;
+    border: 0;
+    border-radius: calc(var(--bx-radius) - 2px);
+    font: inherit;
+    font-size: var(--bx-text-sm);
+    font-weight: 600;
+    color: var(--bx-muted);
+    cursor: pointer;
+    transition: background-color var(--bx-fast) var(--bx-ease), color var(--bx-fast) var(--bx-ease);
+}
+.bx-segment:hover { color: var(--bx-ink); }
+.bx-segment.bx-active { background: var(--bx-surface); color: var(--bx-ink); box-shadow: var(--bx-shadow-sm); }
+
+/* -- fieldset -------------------------------------------------------------- */
+.bx-fieldset {
+    padding: var(--bx-space-5);
+    border: var(--bx-border-width) solid var(--bx-border);
+    border-radius: var(--bx-radius);
+}
+.bx-fieldset > legend {
+    padding-inline: var(--bx-space-3);
+    font-family: var(--bx-font-heading);
+    font-weight: 700;
+    font-size: var(--bx-text-sm);
+}
+
+/* -- stack: layered cards -------------------------------------------------- */
+.bx-layers { display: grid; }
+.bx-layers > * { grid-area: 1 / 1; }
+.bx-layers > *:nth-child(2) { transform: translateY(6px) scale(0.96); opacity: 0.7; z-index: -1; }
+.bx-layers > *:nth-child(3) { transform: translateY(12px) scale(0.92); opacity: 0.45; z-index: -2; }
+
+/* -- diff: two panes with a handle ----------------------------------------- */
+.bx-diff { position: relative; display: grid; overflow: hidden; border-radius: var(--bx-radius); }
+.bx-diff > * { grid-area: 1 / 1; }
+.bx-diff-after { clip-path: inset(0 0 0 var(--bx-diff, 50%)); }
+.bx-diff-handle {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: var(--bx-diff, 50%);
+    width: 3px;
+    background: var(--bx-surface);
+    cursor: col-resize;
+    touch-action: none;
+}
+.bx-diff-handle::after {
+    content: "";
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 2rem; height: 2rem;
+    transform: translate(-50%, -50%);
+    background: var(--bx-surface);
+    border-radius: 50%;
+    box-shadow: var(--bx-shadow);
+}
+
+/* -- mask shapes ----------------------------------------------------------- */
+.bx-mask-circle { border-radius: 50%; overflow: hidden; }
+.bx-mask-squircle { border-radius: 28%; overflow: hidden; }
+.bx-mask-hex { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+.bx-mask-diamond { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+.bx-mask-triangle { clip-path: polygon(50% 0%, 100% 100%, 0% 100%); }
+
+/* -- collapse: the generic one, not the accordion -------------------------- */
+.bx-collapse { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--bx-normal) var(--bx-ease); }
+.bx-collapse > div { overflow: hidden; }
+.bx-collapse.bx-open { grid-template-rows: 1fr; }
+
+/* -- status dot ------------------------------------------------------------ */
+.bx-status { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--bx-muted); }
+.bx-status-online { background: var(--bx-success); }
+.bx-status-busy { background: var(--bx-danger); }
+.bx-status-away { background: var(--bx-warning); }
+.bx-status-pulse { animation: bx-pulse 1.8s var(--bx-ease) infinite; }
+@keyframes bx-pulse { 0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; } 70% { box-shadow: 0 0 0 6px transparent; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .bx-status-pulse { animation: none; }
+    .bx-tour-spot { transition: none; }
+}
+
+@media (forced-colors: active) {
+    .bx-popover, .bx-combobox-list, .bx-palette-panel, .bx-calendar,
+    .bx-toolbar, .bx-kanban-card, .bx-panes { border: 1px solid CanvasText; }
+    .bx-tour-spot { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); }
+}
+
+/* ---------------------------------------------------------------------------
+   TIMELINE
+
+   The rail and the marks are placed from the same two numbers, because a
+   version that gives each its own drifts apart the moment anything else moves.
+   The indent lives on the item and not on the list, so a list reset that
+   outranks a single class cannot throw the marks out of their container.
+
+   The rail here is as thick as everything else and the mark is a square block:
+   a neat round bullet on a wire would be the one polite thing on the page.
+   --------------------------------------------------------------------------- */
+
+.bx-timeline {
+    --bx-timeline-dot: 0.9rem;
+    --bx-timeline-gutter: var(--bx-space-6);
+    --bx-timeline-top: 0.4rem;
+    --bx-timeline-ring: var(--bx-paper);
+    position: relative;
+    padding-left: 0;
+    list-style: none;
+}
+.bx-timeline::before {
+    content: "";
+    position: absolute;
+    top: var(--bx-timeline-top); bottom: 0;
+    left: calc(var(--bx-timeline-dot) / 2 - var(--bx-border-width) / 2);
+    width: var(--bx-border-width);
+    background: var(--bx-ink);
+}
+.bx-timeline-item {
+    position: relative;
+    padding-left: var(--bx-timeline-gutter);
+    padding-bottom: var(--bx-space-5);
+}
+.bx-timeline-item:last-child { padding-bottom: 0; }
+.bx-timeline-item::before {
+    content: "";
+    position: absolute;
+    left: 0; top: var(--bx-timeline-top);
+    width: var(--bx-timeline-dot); height: var(--bx-timeline-dot);
+    background: var(--bx-primary);
+    border: var(--bx-border-width) solid var(--bx-ink);
+    box-shadow: 0 0 0 3px var(--bx-timeline-ring);
+}
+.bx-timeline-item-secondary::before { background: var(--bx-secondary); }
+.bx-timeline-item-accent::before    { background: var(--bx-accent); }
+.bx-timeline-item-success::before   { background: var(--bx-success); }
+.bx-timeline-item-warning::before   { background: var(--bx-warning); }
+.bx-timeline-item-danger::before    { background: var(--bx-danger); }
+.bx-timeline-item-muted::before     { background: var(--bx-paper); }
+.bx-timeline-time {
+    display: block;
+    margin-bottom: var(--bx-space-1);
+    font-family: var(--bx-font-mono);
+    font-size: var(--bx-text-xs);
+    letter-spacing: var(--bx-tracking-wide);
+    text-transform: uppercase;
+    color: var(--bx-muted);
+}
+
+/* ---------------------------------------------------------------------------
+   The brutalist pass over the imported set.
+
+   Structure is portable between frameworks; a look is not. Everything above
+   arrived with borders and radii that make sense in a flat framework — here
+   the border is thick, the corner is square, and the shadow is a hard offset
+   block rather than a blur. A round dot in a brutalist page is a foreign
+   object, so the circles go too, except the two that are circles by
+   definition: the avatar mask and the presence dot.
+   --------------------------------------------------------------------------- */
+
+.bx-popover,
+.bx-combobox-list,
+.bx-palette-panel,
+.bx-datepicker-pop,
+.bx-calendar,
+.bx-toolbar,
+.bx-panes,
+.bx-kanban-col,
+.bx-kanban-card,
+.bx-fieldset,
+.bx-hovercard,
+.bx-tour-pop {
+    border: var(--bx-border-width) solid var(--bx-ink);
+    border-radius: 0;
+    box-shadow: var(--bx-shadow);
+}
+
+/* A blurred shadow is the one thing this style will not do. */
+.bx-popover, .bx-palette-panel, .bx-tour-pop, .bx-combobox-list, .bx-datepicker-pop {
+    box-shadow: var(--bx-shadow-lg);
+}
+
+.bx-toolbar-btn,
+.bx-segment,
+.bx-rating-star,
+.bx-tree-row,
+.bx-combobox-option,
+.bx-palette-item,
+.bx-calendar-day,
+.bx-close {
+    border-radius: 0;
+}
+
+.bx-toolbar-btn.bx-active,
+.bx-segment.bx-active {
+    background: var(--bx-primary);
+    color: var(--bx-primary-ink);
+    box-shadow: var(--bx-shadow-inset);
+}
+
+.bx-tour-dot { border-radius: 0; }
+.bx-kanban-card:active { transform: translate(2px, 2px); }
+.bx-chat-bubble { border: var(--bx-border-width) solid var(--bx-ink); border-radius: 0; box-shadow: var(--bx-shadow-sm); }
+.bx-countdown-num { border: var(--bx-border-width) solid var(--bx-ink); border-radius: 0; }
+.bx-panes-divider { background: var(--bx-ink); }
+.bx-timeline-item::before { border-radius: 0; }
+.bx-float .bx-label { background: var(--bx-paper); }
+
+/* The radial keeps its geometry — a conic gradient is a circle or it is
+   nothing — but the ring reads as drawn rather than rendered. */
+.bx-radial { border: var(--bx-border-width) solid var(--bx-ink); }
+
+/* ===========================================================================
+   26. MOTION, PREFERENCES, PRINT
+   =========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+    .bx-marquee-track { animation: none; }
+    .bx-tilt-l, .bx-tilt-r { transform: none; }
+}
+
+/* Brutalism is already high contrast; forced-colors mode only needs the
+   shadows removed, since a system palette cannot render them meaningfully. */
+@media (forced-colors: active) {
+    .bx-box, .bx-btn, .bx-card, .bx-table, .bx-alert, .bx-modal-dialog,
+    .bx-list-group, .bx-accordion, .bx-toast, .bx-stat { box-shadow: none; }
+    .bx-btn, .bx-card, .bx-alert { border: 3px solid; }
+}
+
+@media print {
+    body { background: #fff; color: #000; }
+    .bx-navbar, .bx-drawer, .bx-backdrop, .bx-toasts, .bx-marquee, .bx-no-print { display: none !important; }
+    .bx-box, .bx-btn, .bx-card, .bx-table, .bx-alert, .bx-stat, .bx-hero,
+    .bx-accordion, .bx-list-group, .bx-brick { box-shadow: none !important; }
+    a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.85em; }
+    h1, h2, h3 { break-after: avoid; }
+    pre, blockquote, table, figure, .bx-card { break-inside: avoid; }
+}
+
+
+/* ---------------------------------------------------------------------------
+   THE SEARCH FIELD AND THREE UTILITIES THE DATA TABLE NEEDS
+
+   An icon sitting inside a field, which is what a filter box looks like
+   everywhere. Here the field keeps its slab border and the icon sits on the
+   border rather than floating inside it.
+   --------------------------------------------------------------------------- */
+
+.bx-search { position: relative; display: inline-flex; align-items: center; }
+.bx-search .ay {
+    position: absolute;
+    left: 0.7rem;
+    pointer-events: none;
+    color: var(--bx-ink);
+}
+.bx-search input {
+    width: 100%;
+    padding: var(--bx-space-2) var(--bx-space-3) var(--bx-space-2) 2.3rem;
+    font: inherit;
+    color: var(--bx-ink);
+    background: var(--bx-surface);
+    border: var(--bx-border-width) solid var(--bx-ink);
+    border-radius: 0;
+}
+.bx-search input:focus-visible { outline: var(--bx-border-width) solid var(--bx-primary); outline-offset: 2px; }
+
+.bx-bold { font-weight: var(--bx-weight-bold); }
+.bx-mr-4 { margin-right: var(--bx-space-4); }
+.bx-badge-accent { background: var(--bx-accent); color: var(--bx-accent-ink); }
