@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import EquipmentExplorer from "@/components/equipment-explorer";
 
 export const metadata: Metadata = {
-  title: "EQUIPMENT — Ski Guide",
+  title: "Equipment — The Ski Handbook",
   description: "Human-centric ski equipment guide. Select a body zone to find the right gear.",
 };
 

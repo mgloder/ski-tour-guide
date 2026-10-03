@@ -2,7 +2,7 @@ import { exercises, type Difficulty, type ExerciseType } from "@/data/exercises"
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "EXERCISE — Ski Guide",
+  title: "Exercise — The Ski Handbook",
   description: "Technique drills, conditioning, and balance exercises for skiers of all levels.",
 };
 

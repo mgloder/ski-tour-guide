@@ -29,10 +29,10 @@ export default function Home() {
         <p className="bx-text-xs bx-uppercase bx-tracking-wide" style={{ opacity: 0.5, marginBottom: "0.5rem" }}>
           Human &amp; AI-agent-friendly
         </p>
-        <p className="bx-display-1 bx-mb-2">Ski Guide</p>
+        <p className="bx-display-1 bx-mb-2">The Ski Handbook</p>
         <p className="bx-lead" style={{ maxWidth: "40rem" }}>
-          A reference for skiers and AI agents alike — exercises, equipment, and mountain
-          destinations. All content accessible via{" "}
+          Everything you need on the mountain — exercises, equipment, and destinations.
+          Also accessible to AI agents via{" "}
           <a href="/api/mcp">MCP endpoint</a> and <a href="/llms.txt">llms.txt</a>.
         </p>
       </div>

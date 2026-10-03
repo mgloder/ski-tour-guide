@@ -2,7 +2,7 @@ import { places } from "@/data/places";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "PLACES — Ski Guide",
+  title: "Places — The Ski Handbook",
   description: "Resort and destination guides with piste data, altitude, and seasonal recommendations.",
 };
 

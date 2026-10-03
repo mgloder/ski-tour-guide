@@ -4,7 +4,7 @@ export default function Nav() {
   return (
     <nav className="bx-navbar">
       <Link href="/" className="bx-navbar-brand">
-        Ski Guide
+        The Ski Handbook
       </Link>
       <ul className="bx-navbar-nav">
         <li><Link href="/exercise" className="bx-nav-link">Exercise</Link></li>

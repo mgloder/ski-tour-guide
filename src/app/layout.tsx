@@ -7,9 +7,9 @@ import "./globals.css";
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 
 export const metadata: Metadata = {
-  title: "SKI GUIDE — Exercise, Equipment & Places",
+  title: "The Ski Handbook — Exercise, Equipment & Places",
   description:
-    "A human & AI-agent-friendly guide to ski exercises, equipment, and destinations. Exposes an MCP endpoint for programmatic access.",
+    "A human & AI-agent-friendly handbook for ski exercises, equipment, and destinations. Exposes an MCP endpoint for programmatic access.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
