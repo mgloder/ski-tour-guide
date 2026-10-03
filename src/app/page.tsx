@@ -6,77 +6,100 @@ const modules = [
     title: "Exercise",
     description:
       "Technique drills, off-snow conditioning, and balance work. From beginner parallel turns to expert carving.",
+    tag: "06 entries",
   },
   {
     href: "/equipment",
     title: "Equipment",
     description:
       "Gear guides covering skis, boots, poles, helmets, safety equipment, and clothing with maintenance tips.",
+    tag: "08 entries",
   },
   {
     href: "/places",
     title: "Places",
     description:
       "Resort and destination guides with piste breakdowns, altitude data, and best-season recommendations.",
+    tag: "06 entries",
   },
 ];
 
 export default function Home() {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-20">
-      <div className="mb-16">
-        <h1 className="text-4xl font-bold tracking-tight mb-4">Ski Guide</h1>
-        <p className="text-lg text-slate-400 max-w-2xl">
-          A reference for skiers and AI agents alike — covering exercises, equipment, and mountain
-          destinations. All content is available via the{" "}
-          <a href="/api/mcp" className="text-sky-400 hover:text-sky-300 transition-colors">
+    <div className="mx-auto max-w-6xl px-4 py-16">
+      {/* Hero */}
+      <div className="mb-16 border-b-2 border-white pb-12">
+        <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-4">
+          Human &amp; AI-agent-friendly
+        </p>
+        <h1 className="text-6xl md:text-8xl font-black uppercase leading-none tracking-tighter mb-6">
+          Ski<br />Guide
+        </h1>
+        <p className="text-zinc-400 max-w-xl leading-relaxed">
+          A reference for skiers and AI agents alike — exercises, equipment, and mountain
+          destinations. All content accessible via{" "}
+          <a href="/api/mcp" className="text-[#ffd400] hover:underline">
             MCP endpoint
           </a>{" "}
           and{" "}
-          <a href="/llms.txt" className="text-sky-400 hover:text-sky-300 transition-colors">
+          <a href="/llms.txt" className="text-[#ffd400] hover:underline">
             llms.txt
           </a>
           .
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {modules.map(({ href, title, description }) => (
-          <Link
-            key={href}
-            href={href}
-            className="group rounded-xl border border-white/10 p-6 hover:border-sky-500/50 hover:bg-white/5 transition-all"
-          >
-            <h2 className="text-xl font-semibold mb-2 group-hover:text-sky-300 transition-colors">
+      {/* Module cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+        {modules.map(({ href, title, description, tag }) => (
+          <Link key={href} href={href} className="block brut-card-accent p-6 bg-black group">
+            <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-4">{tag}</p>
+            <h2 className="text-2xl font-black uppercase mb-3 group-hover:text-[#ffd400] transition-colors">
               {title}
             </h2>
-            <p className="text-sm text-slate-400 leading-relaxed">{description}</p>
+            <p className="text-sm text-zinc-400 leading-relaxed">{description}</p>
           </Link>
         ))}
       </div>
 
-      <div className="mt-16 rounded-xl border border-white/10 p-6 bg-white/[0.02]">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">
+      {/* Agent panel */}
+      <div className="brut-card p-6">
+        <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-4">
           For AI Agents
-        </h2>
-        <div className="space-y-3 text-sm text-slate-400">
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
           <div>
-            <span className="text-slate-300 font-medium">MCP server</span> — POST{" "}
-            <code className="text-sky-400 text-xs">/api/mcp</code> with JSON-RPC 2.0. Supports{" "}
-            <code className="text-xs text-slate-300">tools/list</code> and{" "}
-            <code className="text-xs text-slate-300">tools/call</code>.
+            <p className="font-black uppercase mb-1">MCP Server</p>
+            <p className="text-zinc-400">
+              <code className="text-[#ffd400] font-mono">POST /api/mcp</code>
+              <br />
+              JSON-RPC 2.0 · MCP 2024-11-05
+            </p>
           </div>
           <div>
-            <span className="text-slate-300 font-medium">Available tools:</span>{" "}
-            ski_list_exercises, ski_get_exercise, ski_list_equipment, ski_get_equipment,
-            ski_list_places, ski_get_place
+            <p className="font-black uppercase mb-1">Tools</p>
+            <p className="text-zinc-400 font-mono text-xs leading-relaxed">
+              ski_list_exercises<br />
+              ski_get_exercise<br />
+              ski_list_equipment<br />
+              ski_get_equipment<br />
+              ski_list_places<br />
+              ski_get_place
+            </p>
           </div>
           <div>
-            <span className="text-slate-300 font-medium">Agent discovery:</span>{" "}
-            <a href="/llms.txt" className="text-sky-400 hover:text-sky-300 transition-colors">
-              /llms.txt
-            </a>{" "}
-            contains a structured site index.
+            <p className="font-black uppercase mb-1">Discovery</p>
+            <p className="text-zinc-400">
+              <a href="/llms.txt" className="text-[#ffd400] font-mono hover:underline">
+                /llms.txt
+              </a>{" "}
+              — structured index
+              <br />
+              <a href="/api/mcp" className="text-[#ffd400] font-mono hover:underline">
+                GET /api/mcp
+              </a>{" "}
+              — tool list
+            </p>
           </div>
         </div>
       </div>

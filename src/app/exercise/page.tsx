@@ -2,90 +2,87 @@ import { exercises, type Difficulty, type ExerciseType } from "@/data/exercises"
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Ski Exercises — Ski Guide",
+  title: "EXERCISE — Ski Guide",
   description: "Technique drills, conditioning, and balance exercises for skiers of all levels.",
 };
 
-const difficultyColor: Record<Difficulty, string> = {
-  beginner: "text-green-400 bg-green-400/10",
-  intermediate: "text-sky-400 bg-sky-400/10",
-  advanced: "text-orange-400 bg-orange-400/10",
-  expert: "text-red-400 bg-red-400/10",
+const difficultyStyle: Record<Difficulty, string> = {
+  beginner: "border-green-400 text-green-400",
+  intermediate: "border-sky-400 text-sky-400",
+  advanced: "border-orange-400 text-orange-400",
+  expert: "border-red-400 text-red-400",
 };
 
-const typeColor: Record<ExerciseType, string> = {
-  technique: "text-violet-400 bg-violet-400/10",
-  fitness: "text-amber-400 bg-amber-400/10",
-  balance: "text-teal-400 bg-teal-400/10",
-  conditioning: "text-rose-400 bg-rose-400/10",
+const typeStyle: Record<ExerciseType, string> = {
+  technique: "border-violet-400 text-violet-400",
+  fitness: "border-amber-400 text-amber-400",
+  balance: "border-teal-400 text-teal-400",
+  conditioning: "border-rose-400 text-rose-400",
 };
 
 export default function ExercisePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
-      <h1 className="text-3xl font-bold tracking-tight mb-2">Exercise</h1>
-      <p className="text-slate-400 mb-10">
-        {exercises.length} exercises across technique, fitness, balance, and conditioning.
-      </p>
+      <div className="border-b-2 border-white pb-8 mb-12">
+        <p className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-2">Module 01</p>
+        <h1 className="text-5xl font-black uppercase tracking-tighter">Exercise</h1>
+        <p className="text-zinc-400 mt-2 font-mono text-sm">{exercises.length} entries</p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {exercises.map((ex) => (
-          <article
-            key={ex.id}
-            className="rounded-xl border border-white/10 p-6 bg-white/[0.02]"
-            data-exercise-id={ex.id}
-          >
-            <div className="flex flex-wrap gap-2 mb-3">
+          <article key={ex.id} className="brut-card p-6 bg-black" data-exercise-id={ex.id}>
+            <div className="flex flex-wrap gap-2 mb-4">
               <span
-                className={`text-xs font-medium px-2 py-0.5 rounded-full ${difficultyColor[ex.difficulty]}`}
+                className={`text-xs font-mono font-bold uppercase tracking-widest px-2 py-0.5 border ${difficultyStyle[ex.difficulty]}`}
               >
                 {ex.difficulty}
               </span>
               <span
-                className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeColor[ex.type]}`}
+                className={`text-xs font-mono font-bold uppercase tracking-widest px-2 py-0.5 border ${typeStyle[ex.type]}`}
               >
                 {ex.type}
               </span>
             </div>
 
-            <h2 className="text-lg font-semibold mb-1">{ex.name}</h2>
-            <p className="text-sm text-slate-400 mb-4 leading-relaxed">{ex.description}</p>
+            <h2 className="text-xl font-black uppercase tracking-tight mb-2">{ex.name}</h2>
+            <p className="text-sm text-zinc-400 mb-4 leading-relaxed">{ex.description}</p>
+            <p className="text-xs font-mono text-zinc-600 uppercase tracking-widest mb-4">
+              Duration: {ex.duration}
+            </p>
 
-            <div className="text-xs text-slate-500 mb-4">Duration: {ex.duration}</div>
-
-            <details className="group">
-              <summary className="cursor-pointer text-sm text-sky-400 hover:text-sky-300 transition-colors list-none">
-                Steps &amp; tips
+            <details>
+              <summary className="cursor-pointer text-xs font-black uppercase tracking-widest text-[#ffd400] hover:underline list-none select-none">
+                [ Steps &amp; Tips ]
               </summary>
-              <div className="mt-4 space-y-4">
+              <div className="mt-4 space-y-4 border-t-2 border-white pt-4">
                 <div>
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
-                    Steps
-                  </h3>
-                  <ol className="space-y-1.5 text-sm text-slate-300">
+                  <h3 className="text-xs font-black uppercase tracking-widest mb-2">Steps</h3>
+                  <ol className="space-y-1.5 text-sm text-zinc-300">
                     {ex.steps.map((step, i) => (
                       <li key={i} className="flex gap-2">
-                        <span className="text-slate-600 shrink-0">{i + 1}.</span>
+                        <span className="font-mono text-zinc-600 shrink-0">{String(i + 1).padStart(2, "0")}.</span>
                         {step}
                       </li>
                     ))}
                   </ol>
                 </div>
                 <div>
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
-                    Tips
-                  </h3>
-                  <ul className="space-y-1 text-sm text-slate-400 list-disc list-inside">
+                  <h3 className="text-xs font-black uppercase tracking-widest mb-2">Tips</h3>
+                  <ul className="space-y-1 text-sm text-zinc-400">
                     {ex.tips.map((tip, i) => (
-                      <li key={i}>{tip}</li>
+                      <li key={i} className="flex gap-2">
+                        <span className="text-[#ffd400] shrink-0">—</span>
+                        {tip}
+                      </li>
                     ))}
                   </ul>
                 </div>
                 <div>
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
-                    Target muscles
-                  </h3>
-                  <p className="text-sm text-slate-400">{ex.targetMuscles.join(", ")}</p>
+                  <h3 className="text-xs font-black uppercase tracking-widest mb-1">Target muscles</h3>
+                  <p className="text-xs font-mono text-zinc-500 uppercase tracking-wide">
+                    {ex.targetMuscles.join(" · ")}
+                  </p>
                 </div>
               </div>
             </details>
