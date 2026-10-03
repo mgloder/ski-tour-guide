@@ -1,0 +1,49 @@
+name: Annual data refresh reminder
+
+on:
+  schedule:
+    - cron: "0 9 1 10 *"  # 9am UTC on Oct 1 every year
+  workflow_dispatch:       # allow manual trigger to test
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "📅 Annual data refresh due — openskidata.org",
+              labels: ["maintenance"],
+              body: `## Ski resort data refresh
+
+The place database was last bulk-imported from [openskidata.org](https://openskidata.org) around October 2025.
+It's time to pull the latest data.
+
+### Steps
+
+1. Make sure \`.env.local\` has a valid \`POSTGRES_URL\`
+2. Run the import script:
+   \`\`\`bash
+   npx tsx scripts/import-openskidata.ts
+   \`\`\`
+3. Check the output — it reports how many resorts were inserted / skipped
+4. Verify on the live site: [/places](/places)
+5. Close this issue
+
+### Current thresholds (tweak in \`scripts/import-openskidata.ts\` if needed)
+
+| Filter | Value |
+|--------|-------|
+| Status | \`operating\` only |
+| Activities | \`downhill\` only |
+| Min runs | 5 |
+| Min km | 1 |
+
+> The script uses \`ON CONFLICT (id) DO NOTHING\`, so re-running is safe — it only adds new resorts.
+`,
+            });
