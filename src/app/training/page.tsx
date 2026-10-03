@@ -2,10 +2,10 @@ import { exercises, type Difficulty, type ExerciseType } from "@/data/exercises"
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Exercise",
-  description: "Ski technique drills, off-snow conditioning, and balance exercises for all levels — from first-timers to expert carvers.",
-  alternates: { canonical: "https://theskihandbook.com/exercise" },
-  openGraph: { url: "https://theskihandbook.com/exercise" },
+  title: "Training",
+  description: "Ski technique drills, off-snow conditioning, and balance training for all levels — from first-timers to expert carvers.",
+  alternates: { canonical: "https://theskihandbook.com/training" },
+  openGraph: { url: "https://theskihandbook.com/training" },
 };
 
 const difficultyVariant: Record<Difficulty, string> = {
@@ -27,7 +27,7 @@ export default function ExercisePage() {
     <div style={{ padding: "2rem 1.5rem" }}>
       <div className="bx-mb-6" style={{ borderBottom: "3px solid currentColor", paddingBottom: "1.5rem" }}>
         <p className="bx-text-xs bx-uppercase bx-tracking-wide" style={{ opacity: 0.5 }}>Module 01</p>
-        <h1 className="bx-display-2 bx-mb-0">Exercise</h1>
+        <h1 className="bx-display-2 bx-mb-0">Training</h1>
         <p className="bx-text-sm" style={{ opacity: 0.5 }}>{exercises.length} entries</p>
       </div>
 

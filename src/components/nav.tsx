@@ -7,7 +7,7 @@ export default function Nav() {
         The Ski Handbook
       </Link>
       <ul className="bx-navbar-nav">
-        <li><Link href="/exercise" className="bx-nav-link">Exercise</Link></li>
+        <li><Link href="/training" className="bx-nav-link">Training</Link></li>
         <li><Link href="/equipment" className="bx-nav-link">Equipment</Link></li>
         <li><Link href="/places" className="bx-nav-link">Places</Link></li>
       </ul>

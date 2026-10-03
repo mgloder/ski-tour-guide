@@ -2,8 +2,8 @@ import Link from "next/link";
 
 const modules = [
   {
-    href: "/exercise",
-    title: "Exercise",
+    href: "/training",
+    title: "Training",
     tag: "06 entries",
     description: "Technique drills, off-snow conditioning, and balance work. From beginner parallel turns to expert carving.",
   },
@@ -31,7 +31,7 @@ export default function Home() {
         </p>
         <p className="bx-display-1 bx-mb-2">The Ski Handbook</p>
         <p className="bx-lead" style={{ maxWidth: "40rem" }}>
-          Everything you need on the mountain — exercises, equipment, and destinations.
+          Everything you need on the mountain — training, equipment, and destinations.
           Also accessible to AI agents via{" "}
           <a href="/api/mcp">MCP endpoint</a> and <a href="/llms.txt">llms.txt</a>.
         </p>

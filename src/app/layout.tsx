@@ -9,13 +9,13 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 export const metadata: Metadata = {
   metadataBase: new URL("https://theskihandbook.com"),
   title: {
-    default: "The Ski Handbook — Exercise, Equipment & Places",
+    default: "The Ski Handbook — Training, Equipment & Places",
     template: "%s — The Ski Handbook",
   },
   description:
-    "Your complete mountain sport reference — ski exercises, gear guides, and resort destinations for skiers and snowboarders of every level.",
+    "Your complete mountain sport reference — ski training, gear guides, and resort destinations for skiers and snowboarders of every level.",
   keywords: [
-    "ski guide", "ski equipment", "ski exercises", "ski resorts",
+    "ski guide", "ski equipment", "ski training", "ski resorts",
     "snowboard guide", "backcountry skiing", "ski handbook",
     "avalanche safety", "ski gear", "mountain sport",
   ],
@@ -26,13 +26,13 @@ export const metadata: Metadata = {
     siteName: "The Ski Handbook",
     title: "The Ski Handbook",
     description:
-      "Your complete mountain sport reference — ski exercises, gear guides, and resort destinations for skiers and snowboarders of every level.",
+      "Your complete mountain sport reference — ski training, gear guides, and resort destinations for skiers and snowboarders of every level.",
   },
   twitter: {
     card: "summary_large_image",
     title: "The Ski Handbook",
     description:
-      "Your complete mountain sport reference — ski exercises, gear guides, and resort destinations for skiers and snowboarders of every level.",
+      "Your complete mountain sport reference — ski training, gear guides, and resort destinations for skiers and snowboarders of every level.",
   },
   alternates: {
     canonical: "https://theskihandbook.com",

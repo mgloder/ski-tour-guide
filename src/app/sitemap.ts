@@ -9,7 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: "https://theskihandbook.com/exercise",
+      url: "https://theskihandbook.com/training",
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.8,
