@@ -2,21 +2,21 @@ import Link from "next/link";
 
 const modules = [
   {
-    href: "/training",
+    href: null,
     title: "Training",
-    tag: "06 entries",
+    tag: "coming soon",
     description: "Technique drills, off-snow conditioning, and balance work. From beginner parallel turns to expert carving.",
   },
   {
-    href: "/equipment",
+    href: null,
     title: "Equipment",
-    tag: "08 entries",
+    tag: "coming soon",
     description: "Gear guides covering skis, boots, poles, helmets, safety equipment, and clothing with maintenance tips.",
   },
   {
     href: "/places",
     title: "Places",
-    tag: "06 entries",
+    tag: "2,697 destinations",
     description: "Resort and destination guides with piste breakdowns, altitude data, and best-season recommendations.",
   },
 ];
@@ -39,9 +39,9 @@ export default function Home() {
 
       {/* Module cards */}
       <div className="bx-brick bx-brick-3 bx-mb-6">
-        {modules.map(({ href, title, tag, description }) => (
-          <Link href={href} key={href} style={{ textDecoration: "none", color: "inherit" }}>
-            <div className="bx-card bx-lift" style={{ height: "100%" }}>
+        {modules.map(({ href, title, tag, description }) => {
+          const card = (
+            <div className="bx-card" style={{ height: "100%", opacity: href ? 1 : 0.35 }}>
               <div className="bx-card-header">
                 <span className="bx-badge">{tag}</span>
               </div>
@@ -50,8 +50,15 @@ export default function Home() {
                 <p className="bx-card-text">{description}</p>
               </div>
             </div>
-          </Link>
-        ))}
+          );
+          return href ? (
+            <Link href={href} key={title} style={{ textDecoration: "none", color: "inherit" }}>
+              {card}
+            </Link>
+          ) : (
+            <div key={title} style={{ cursor: "not-allowed" }}>{card}</div>
+          );
+        })}
       </div>
 
       {/* Agent panel */}
