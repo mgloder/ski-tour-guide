@@ -103,9 +103,13 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
 
     const abort = new AbortController();
     pisteAbortRef.current = abort;
+    setLoading(true);
 
     fetchPistes(place.latitude, place.longitude, abort.signal).then(geojson => {
-      if (abort.signal.aborted || !mapRef.current || map.getSource("ski")) return;
+      if (abort.signal.aborted || !mapRef.current || map.getSource("ski")) {
+        if (!abort.signal.aborted) setLoading(false);
+        return;
+      }
       map.addSource("ski", { type: "geojson", data: geojson });
       map.addLayer({ id: "lifts", type: "line", source: "ski",
         filter: ["==", ["get", "kind"], "lift"],
@@ -139,7 +143,8 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           map.easeTo({ ...cam, duration: 600 });
         }
       }
-    }).catch(() => {});
+      setLoading(false);
+    }).catch(() => { setLoading(false); });
   }
 
   // ── Init map once ─────────────────────────────────────────────────────────
