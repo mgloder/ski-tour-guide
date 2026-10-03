@@ -17,21 +17,21 @@ function buildGeoJSON(places: DbPlace[], highlightedIds: string[], selectedId: s
   };
 }
 
-async function fetchPistes(lat: number, lng: number) {
+async function fetchPistes(lat: number, lng: number, signal: AbortSignal) {
   const d = 0.22;
   const bbox = `${lat - d},${lng - d},${lat + d},${lng + d}`;
   const q = `[out:json][timeout:25];(way["piste:type"="downhill"](${bbox});way["aerialway"](${bbox}););out geom;`;
-  const r = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
+  const r = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`, { signal });
   const j = await r.json();
   type El = { type: string; geometry: { lat: number; lon: number }[]; tags?: Record<string, string> };
   return {
     type: "FeatureCollection" as const,
     features: (j.elements as El[])
-      .filter(e => e.type === "way" && e.geometry?.length > 1)
-      .map(e => ({
+      .filter(el => el.type === "way" && el.geometry?.length > 1)
+      .map(el => ({
         type: "Feature" as const,
-        geometry: { type: "LineString" as const, coordinates: e.geometry.map(p => [p.lon, p.lat]) },
-        properties: { kind: e.tags?.["piste:type"] ? "piste" : "lift", difficulty: e.tags?.["piste:difficulty"] ?? "unknown" },
+        geometry: { type: "LineString" as const, coordinates: el.geometry.map(p => [p.lon, p.lat]) },
+        properties: { kind: el.tags?.["piste:type"] ? "piste" : "lift", difficulty: el.tags?.["piste:difficulty"] ?? "unknown" },
       })),
   };
 }
@@ -56,29 +56,35 @@ type Props = {
   selected: DbPlace | null;
   onSelect: (p: DbPlace) => void;
   onClusterSelect: (ids: string[]) => void;
+  onBoundsChange: (ids: string[]) => void;
 };
 
-export default function PlacesMap({ places, highlightedIds, selected, onSelect, onClusterSelect }: Props) {
-  const [loading, setLoading]    = useState(true);
-  const containerRef             = useRef<HTMLDivElement>(null);
-  const mapRef                   = useRef<any>(null);
-  const mapReadyRef              = useRef(false);
-  const onSelectRef          = useRef(onSelect);
-  const onClusterSelectRef   = useRef(onClusterSelect);
-  const placesRef            = useRef(places);
-  const highlightedRef       = useRef(highlightedIds);
-  const selectedRef          = useRef(selected);
+export default function PlacesMap({ places, highlightedIds, selected, onSelect, onClusterSelect, onBoundsChange }: Props) {
+  const [loading, setLoading]      = useState(true);
+  const containerRef               = useRef<HTMLDivElement>(null);
+  const mapRef                     = useRef<any>(null);
+  const mapReadyRef                = useRef(false);
+  const pisteAbortRef              = useRef<AbortController | null>(null);
+  const onSelectRef                = useRef(onSelect);
+  const onClusterSelectRef         = useRef(onClusterSelect);
+  const onBoundsChangeRef          = useRef(onBoundsChange);
+  const placesRef                  = useRef(places);
+  const highlightedRef             = useRef(highlightedIds);
+  const selectedRef                = useRef(selected);
 
   // Keep refs in sync with latest props
   useEffect(() => { onSelectRef.current        = onSelect;        }, [onSelect]);
   useEffect(() => { onClusterSelectRef.current = onClusterSelect; }, [onClusterSelect]);
+  useEffect(() => { onBoundsChangeRef.current  = onBoundsChange;  }, [onBoundsChange]);
   useEffect(() => { placesRef.current          = places;          }, [places]);
   useEffect(() => { highlightedRef.current     = highlightedIds;  }, [highlightedIds]);
   useEffect(() => { selectedRef.current        = selected;        }, [selected]);
 
-  // ── Helpers that use the live map ────────────────────────────────────────
+  // ── Selection: camera + piste overlay for the selected place ────────────
   function applySelection(map: any, place: DbPlace | null) {
-    // Clean up previous piste overlay
+    // Cancel any in-flight piste request and clear previous overlay
+    pisteAbortRef.current?.abort();
+    pisteAbortRef.current = null;
     if (map.getLayer("pistes")) map.removeLayer("pistes");
     if (map.getLayer("lifts"))  map.removeLayer("lifts");
     if (map.getSource("ski"))   map.removeSource("ski");
@@ -95,29 +101,23 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
     if (!place.latitude || !place.longitude) return;
     map.flyTo({ center: [place.longitude, place.latitude], zoom: 10, duration: 800 });
 
-    fetchPistes(place.latitude, place.longitude).then(geojson => {
-      const m = mapRef.current;
-      if (!m || m.getSource("ski")) return;
-      m.addSource("ski", { type: "geojson", data: geojson });
-      m.addLayer({ id: "lifts",  type: "line", source: "ski", filter: ["==", ["get", "kind"], "lift"],
+    const abort = new AbortController();
+    pisteAbortRef.current = abort;
+
+    fetchPistes(place.latitude, place.longitude, abort.signal).then(geojson => {
+      if (abort.signal.aborted || !mapRef.current || map.getSource("ski")) return;
+      map.addSource("ski", { type: "geojson", data: geojson });
+      map.addLayer({ id: "lifts", type: "line", source: "ski",
+        filter: ["==", ["get", "kind"], "lift"],
         paint: { "line-color": "#9ca3af", "line-width": 1.5, "line-dasharray": [3, 2] } });
-      m.addLayer({ id: "pistes", type: "line", source: "ski", filter: ["==", ["get", "kind"], "piste"],
+      map.addLayer({ id: "pistes", type: "line", source: "ski",
+        filter: ["==", ["get", "kind"], "piste"],
         paint: {
           "line-color": ["match", ["get", "difficulty"],
             "novice","#166534","easy","#166534","intermediate","#1e40af",
             "advanced","#991b1b","expert","#18181b","freeride","#18181b","#6b7280"],
           "line-width": 2, "line-opacity": 0.9,
         } });
-      const pisteCoords = geojson.features.filter(f => f.properties.kind === "piste")
-        .flatMap(f => f.geometry.coordinates as [number, number][]);
-      if (pisteCoords.length) {
-        let [mnLng, mxLng, mnLat, mxLat] = [pisteCoords[0][0], pisteCoords[0][0], pisteCoords[0][1], pisteCoords[0][1]];
-        for (const [lng, lat] of pisteCoords) {
-          if (lng < mnLng) mnLng = lng; if (lng > mxLng) mxLng = lng;
-          if (lat < mnLat) mnLat = lat; if (lat > mxLat) mxLat = lat;
-        }
-        m.fitBounds([[mnLng, mnLat], [mxLng, mxLat]], { padding: 40, maxZoom: 14, duration: 600 });
-      }
     }).catch(() => {});
   }
 
@@ -260,9 +260,30 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
         map.on("mouseenter", "place-circles", () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", "place-circles", () => { map.getCanvas().style.cursor = ""; });
 
+        // Loading spinner: only for tile/vector sources, not the piste GeoJSON overlay
+        map.on("sourcedataloading", (e: any) => {
+          if (e.sourceId !== "ski" && e.sourceId !== "places") setLoading(true);
+        });
+        map.on("idle", () => setLoading(false));
+
+        // Report visible place IDs and load piste overlay on every camera settle
+        let pisteAbort: AbortController | null = null;
+
+        function onMoveEnd() {
+          const bounds = map.getBounds();
+          const ids = placesRef.current
+            .filter(p => p.latitude != null && p.longitude != null &&
+              bounds.contains([p.longitude!, p.latitude!]))
+            .map(p => p.id);
+          onBoundsChangeRef.current(ids);
+        }
+
+        map.on("moveend", onMoveEnd);
+
         // Mark as ready — then handle any selection that was already set
         mapReadyRef.current = true;
         if (selectedRef.current) applySelection(map, selectedRef.current);
+        onMoveEnd(); // seed list on first load
       });
     });
 

@@ -92,25 +92,33 @@ function RunStrip({ place }: { place: DbPlace }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
-  const [level,      setLevel]      = useState<string | null>(null);
-  const [terrain,    setTerrain]    = useState<string | null>(null);
-  const [selected,   setSelected]   = useState<DbPlace | null>(null);
-  const [query,      setQuery]      = useState("");
-  const [visible,    setVisible]    = useState(PAGE);
-  const [clusterIds, setClusterIds] = useState<string[] | null>(null);
+  const [level,          setLevel]          = useState<string | null>(null);
+  const [terrain,        setTerrain]        = useState<string | null>(null);
+  const [selected,       setSelected]       = useState<DbPlace | null>(null);
+  const [query,          setQuery]          = useState("");
+  const [visible,        setVisible]        = useState(PAGE);
+  const [clusterIds,     setClusterIds]     = useState<string[] | null>(null);
+  const [mapVisibleIds,  setMapVisibleIds]  = useState<string[] | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const filtered       = useMemo(() => filterPlaces(places, level, terrain, query), [places, level, terrain, query]);
   const highlightedIds = useMemo(() => filtered.map(p => p.id), [filtered]);
-  // In cluster mode the list shows only that cluster's places; otherwise the full filtered set
-  const displayPlaces  = useMemo(
-    () => clusterIds ? places.filter(p => clusterIds.includes(p.id)) : filtered,
-    [clusterIds, places, filtered],
-  );
+  // In cluster mode show cluster contents; otherwise intersect filter with map viewport
+  const displayPlaces  = useMemo(() => {
+    if (clusterIds) return places.filter(p => clusterIds.includes(p.id));
+    if (!mapVisibleIds) return filtered;
+    const viewport = new Set(mapVisibleIds);
+    // always keep the selected place visible even if it scrolled out of view
+    return filtered.filter(p => viewport.has(p.id) || p.id === selected?.id);
+  }, [clusterIds, places, filtered, mapVisibleIds, selected?.id]);
   const visiblePlaces  = useMemo(() => displayPlaces.slice(0, visible), [displayPlaces, visible]);
 
   function handleSelect(place: DbPlace) {
     setSelected(prev => prev?.id === place.id ? null : place);
+  }
+
+  function handleMapSelect(place: DbPlace) {
+    setSelected(place);
   }
 
   function handleClusterSelect(ids: string[]) {
@@ -155,7 +163,9 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           <p className="bx-text-xs bx-uppercase bx-tracking-wide" style={{ opacity: 0.5 }}>Module 03</p>
           <h1 className="bx-display-2 bx-mb-0">Places</h1>
           <p className="bx-text-sm" style={{ opacity: 0.5 }}>
-            {clusterIds ? `${clusterIds.length} in area` : `${filtered.length} / ${places.length} destinations`}
+            {clusterIds
+              ? `${clusterIds.length} in area`
+              : `${displayPlaces.length} visible · ${places.length} total`}
           </p>
         </div>
 
@@ -210,8 +220,9 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
             places={places}
             highlightedIds={highlightedIds}
             selected={selected}
-            onSelect={handleSelect}
+            onSelect={handleMapSelect}
             onClusterSelect={handleClusterSelect}
+            onBoundsChange={setMapVisibleIds}
           />
         </div>
 
