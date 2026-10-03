@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exercises } from "@/data/exercises";
 import { equipment } from "@/data/equipment";
-import { places } from "@/data/places";
+import { getPlaces, getPlace } from "@/lib/places";
 
 // MCP JSON-RPC 2.0 server for ski-tour-guide
 // Protocol: https://spec.modelcontextprotocol.io
@@ -24,12 +24,7 @@ function ok(id: JsonRpcRequest["id"], result: unknown): JsonRpcResponse {
   return { jsonrpc: "2.0", id, result };
 }
 
-function err(
-  id: JsonRpcRequest["id"],
-  code: number,
-  message: string,
-  data?: unknown
-): JsonRpcResponse {
+function err(id: JsonRpcRequest["id"], code: number, message: string, data?: unknown): JsonRpcResponse {
   return { jsonrpc: "2.0", id, error: { code, message, data } };
 }
 
@@ -37,7 +32,7 @@ const TOOLS = [
   {
     name: "ski_list_exercises",
     description:
-      "List ski exercises. Optionally filter by difficulty (beginner, intermediate, advanced, expert) or type (technique, fitness, balance, conditioning).",
+      "List ski training exercises. Optionally filter by difficulty (beginner, intermediate, advanced, expert) or type (technique, fitness, balance, conditioning).",
     inputSchema: {
       type: "object",
       properties: {
@@ -56,7 +51,7 @@ const TOOLS = [
   },
   {
     name: "ski_get_exercise",
-    description: "Get full details of a single ski exercise by its id.",
+    description: "Get full details of a single ski training exercise by its id.",
     inputSchema: {
       type: "object",
       required: ["id"],
@@ -97,98 +92,114 @@ const TOOLS = [
   {
     name: "ski_list_places",
     description:
-      "List ski resorts and places. Optionally filter by country or difficulty (beginner, intermediate, advanced, all).",
+      "List ski resorts from a database of 2,600+ worldwide destinations. Results are sorted by size (largest first) by default. Use filters to narrow down. Returns up to `limit` results (default 50, max 200).",
     inputSchema: {
       type: "object",
       properties: {
-        country: { type: "string", description: "Country name to filter by" },
+        country: {
+          type: "string",
+          description: "Filter by country name (e.g. 'France', 'Austria', 'Switzerland')",
+        },
         difficulty: {
           type: "string",
           enum: ["beginner", "intermediate", "advanced", "all"],
+          description: "Filter by overall resort difficulty",
+        },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description: "Filter by tags, e.g. ['powder', 'glacier', 'backcountry', 'beginner-friendly', 'expert', 'summer-skiing']. Any match returns the resort.",
+        },
+        min_km: {
+          type: "number",
+          description: "Minimum total piste length in km",
+        },
+        max_km: {
+          type: "number",
+          description: "Maximum total piste length in km",
+        },
+        limit: {
+          type: "number",
+          description: "Max results to return (default 50, max 200)",
         },
       },
     },
   },
   {
     name: "ski_get_place",
-    description: "Get full details of a single ski place/resort by its id.",
+    description: "Get full details of a single ski resort by its id (e.g. 'zermatt-ch', 'les-trois-vallees-fr').",
     inputSchema: {
       type: "object",
       required: ["id"],
       properties: {
-        id: { type: "string", description: "Place id" },
+        id: { type: "string", description: "Resort id" },
       },
     },
   },
 ];
 
-function handleToolCall(
-  name: string,
-  args: Record<string, unknown>
-): unknown {
+async function handleToolCall(name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
     case "ski_list_exercises": {
       let result = exercises;
-      if (args.difficulty)
-        result = result.filter((e) => e.difficulty === args.difficulty);
-      if (args.type) result = result.filter((e) => e.type === args.type);
+      if (args.difficulty) result = result.filter(e => e.difficulty === args.difficulty);
+      if (args.type)       result = result.filter(e => e.type === args.type);
       return result.map(({ id, name, description, difficulty, type, duration }) => ({
-        id,
-        name,
-        description,
-        difficulty,
-        type,
-        duration,
+        id, name, description, difficulty, type, duration,
       }));
     }
     case "ski_get_exercise": {
-      const exercise = exercises.find((e) => e.id === args.id);
+      const exercise = exercises.find(e => e.id === args.id);
       if (!exercise) throw { code: -32602, message: `Exercise '${args.id}' not found` };
       return exercise;
     }
     case "ski_list_equipment": {
       let result = equipment;
-      if (args.category)
-        result = result.filter((e) => e.category === args.category);
-      if (args.skillLevel)
-        result = result.filter((e) => e.skillLevel === args.skillLevel);
+      if (args.category)   result = result.filter(e => e.category === args.category);
+      if (args.skillLevel) result = result.filter(e => e.skillLevel === args.skillLevel);
       return result.map(({ id, name, description, category, skillLevel, priceRange }) => ({
-        id,
-        name,
-        description,
-        category,
-        skillLevel,
-        priceRange,
+        id, name, description, category, skillLevel, priceRange,
       }));
     }
     case "ski_get_equipment": {
-      const item = equipment.find((e) => e.id === args.id);
+      const item = equipment.find(e => e.id === args.id);
       if (!item) throw { code: -32602, message: `Equipment '${args.id}' not found` };
       return item;
     }
     case "ski_list_places": {
-      let result = places;
-      if (args.country)
-        result = result.filter(
-          (p) => p.country.toLowerCase() === (args.country as string).toLowerCase()
-        );
-      if (args.difficulty)
-        result = result.filter((p) => p.difficulty === args.difficulty);
-      return result.map(
-        ({ id, name, country, region, description, altitude, totalKm, difficulty }) => ({
-          id,
-          name,
-          country,
-          region,
-          description,
-          altitude,
-          totalKm,
-          difficulty,
-        })
-      );
+      let places = await getPlaces();
+
+      if (args.country) {
+        const c = (args.country as string).toLowerCase();
+        places = places.filter(p => p.country?.toLowerCase() === c);
+      }
+      if (args.difficulty && args.difficulty !== "all") {
+        places = places.filter(p => p.difficulty === args.difficulty);
+      }
+      if (args.tags && Array.isArray(args.tags) && args.tags.length > 0) {
+        const tags = args.tags as string[];
+        places = places.filter(p => tags.some(t => p.tags.includes(t)));
+      }
+      if (args.min_km != null) {
+        places = places.filter(p => (p.total_km ?? 0) >= (args.min_km as number));
+      }
+      if (args.max_km != null) {
+        places = places.filter(p => (p.total_km ?? 0) <= (args.max_km as number));
+      }
+
+      const limit = Math.min(Number(args.limit ?? 50), 200);
+      return places.slice(0, limit).map(({
+        id, name, country, region, description,
+        total_km, altitude_base, altitude_peak,
+        difficulty, tags, website, skimap_url,
+      }) => ({
+        id, name, country, region, description,
+        total_km, altitude_base, altitude_peak,
+        difficulty, tags, website, skimap_url,
+      }));
     }
     case "ski_get_place": {
-      const place = places.find((p) => p.id === args.id);
+      const place = await getPlace(args.id as string);
       if (!place) throw { code: -32602, message: `Place '${args.id}' not found` };
       return place;
     }
@@ -197,9 +208,8 @@ function handleToolCall(
   }
 }
 
-function dispatch(req: JsonRpcRequest): JsonRpcResponse {
+async function dispatch(req: JsonRpcRequest): Promise<JsonRpcResponse> {
   const { id, method, params = {} } = req;
-
   try {
     switch (method) {
       case "initialize":
@@ -208,22 +218,18 @@ function dispatch(req: JsonRpcRequest): JsonRpcResponse {
           serverInfo: { name: "ski-tour-guide", version: "1.0.0" },
           capabilities: { tools: {} },
         });
-
       case "tools/list":
         return ok(id, { tools: TOOLS });
-
       case "tools/call": {
         const toolName = params.name as string;
         const toolArgs = (params.arguments ?? {}) as Record<string, unknown>;
-        const content = handleToolCall(toolName, toolArgs);
+        const content = await handleToolCall(toolName, toolArgs);
         return ok(id, {
           content: [{ type: "text", text: JSON.stringify(content, null, 2) }],
         });
       }
-
       case "ping":
         return ok(id, {});
-
       default:
         return err(id, -32601, `Method '${method}' not found`);
     }
@@ -235,11 +241,9 @@ function dispatch(req: JsonRpcRequest): JsonRpcResponse {
 
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as JsonRpcRequest | JsonRpcRequest[];
-
   const response = Array.isArray(body)
-    ? body.map(dispatch)
-    : dispatch(body);
-
+    ? await Promise.all(body.map(dispatch))
+    : await dispatch(body);
   return NextResponse.json(response, {
     headers: {
       "Content-Type": "application/json",
@@ -267,6 +271,6 @@ export async function GET() {
     version: "1.0.0",
     protocol: "MCP JSON-RPC 2.0",
     endpoint: "/api/mcp",
-    tools: TOOLS.map((t) => ({ name: t.name, description: t.description })),
+    tools: TOOLS.map(t => ({ name: t.name, description: t.description })),
   });
 }

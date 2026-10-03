@@ -1,14 +1,14 @@
-# Ski Guide — llms.txt
+# The Ski Handbook — llms.txt
 
-> A human & AI-agent-friendly ski reference covering exercises, equipment, and destinations.
+> A human & AI-agent-friendly ski reference covering destinations, training, and equipment.
 > All data is programmatically accessible via an MCP server endpoint.
 
 ## Site
 
 - Home: /
-- Exercise module: /exercise
-- Equipment module: /equipment
-- Places module: /places
+- Places module: /places — 2,600+ ski resorts worldwide with piste data, altitude, difficulty, and tags
+- Training module: /training — coming soon
+- Equipment module: /equipment — coming soon
 
 ## AI / Agent access
 
@@ -16,16 +16,30 @@
 
 - Endpoint: POST /api/mcp
 - Protocol: JSON-RPC 2.0, MCP spec 2024-11-05
-- Discovery: GET /api/mcp returns tool list
+- Discovery: GET /api/mcp returns tool list and descriptions
 
 #### Available tools
 
-- **ski_list_exercises** — list exercises; filter by `difficulty` (beginner|intermediate|advanced|expert) or `type` (technique|fitness|balance|conditioning)
+- **ski_list_places** — list ski resorts (2,600+ worldwide); filter by `country`, `difficulty`, `tags`, `min_km`, `max_km`; paginate with `limit` (default 50, max 200); sorted largest first
+- **ski_get_place** — get full resort details by `id` (e.g. `"zermatt-ch"`, `"les-trois-vallees-fr"`)
+- **ski_list_exercises** — list training exercises; filter by `difficulty` or `type`
 - **ski_get_exercise** — get full exercise details by `id`
-- **ski_list_equipment** — list equipment; filter by `category` (skis|boots|poles|helmet|clothing|safety|accessories) or `skillLevel`
+- **ski_list_equipment** — list equipment items; filter by `category` or `skillLevel`
 - **ski_get_equipment** — get full equipment details by `id`
-- **ski_list_places** — list ski resorts; filter by `country` or `difficulty`
-- **ski_get_place** — get full resort details by `id`
+
+#### Place fields returned by ski_list_places / ski_get_place
+
+```
+id, name, country, region, description,
+total_km, altitude_base, altitude_peak, difficulty,
+runs_green, runs_blue, runs_red, runs_black,
+tags, website, skimap_url, highlights, best_months,
+latitude, longitude
+```
+
+#### Common tags for filtering
+
+`beginner-friendly`, `intermediate`, `advanced`, `expert`, `powder`, `off-piste`, `glacier`, `backcountry`, `summer-skiing`, `freeride`, `resort`
 
 #### Example: initialize
 
@@ -41,30 +55,36 @@ POST /api/mcp
 {"jsonrpc":"2.0","id":2,"method":"tools/list"}
 ```
 
-#### Example: call a tool
+#### Example: find large powder resorts in France
 
 ```json
 POST /api/mcp
-{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ski_list_places","arguments":{"country":"France"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ski_list_places","arguments":{"country":"France","tags":["powder"],"min_km":100,"limit":10}}}
+```
+
+#### Example: get a specific resort
+
+```json
+POST /api/mcp
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"ski_get_place","arguments":{"id":"zermatt-ch"}}}
 ```
 
 ## Content summary
 
-### Exercises (6 entries)
+### Places (2,600+ resorts)
 
-Covers: parallel turn (intermediate/technique), carving (advanced/technique), wall sit (beginner/conditioning), single-leg balance (beginner/balance), short radius turns (advanced/technique), lateral hops (intermediate/fitness).
+Worldwide coverage of operating downhill ski areas sourced from openskidata.org.
+Includes resorts across Europe (France, Austria, Switzerland, Italy, Norway, Sweden, …),
+North America (USA, Canada), Asia (Japan, South Korea, China), and more.
+Each resort includes piste statistics, elevation data, difficulty rating, and tags.
+
+### Training exercises (6 entries)
+
+Parallel turn (intermediate/technique), carving (advanced/technique),
+wall sit (beginner/conditioning), single-leg balance (beginner/balance),
+short radius turns (advanced/technique), lateral hops (intermediate/fitness).
 
 ### Equipment (8 entries)
 
-Covers: all-mountain skis, alpine ski boots, ski poles, ski helmet, avalanche airbag pack, avalanche transceiver/beacon, ski goggles, merino wool base layer.
-
-### Places (6 entries)
-
-Covers: Les Trois Vallées (France), Zermatt (Switzerland), Verbier (Switzerland), St. Anton am Arlberg (Austria), Niseko United (Japan), Les Deux Alpes (France).
-
-## Structured data notes
-
-Each page renders `data-*` attributes on article elements for machine parsing:
-- Exercise articles: `data-exercise-id`
-- Equipment articles: `data-equipment-id`
-- Place articles: `data-place-id`
+All-mountain skis, alpine ski boots, ski poles, ski helmet,
+avalanche airbag pack, avalanche transceiver/beacon, ski goggles, merino wool base layer.
