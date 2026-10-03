@@ -2,13 +2,13 @@ import Link from "next/link";
 
 const modules = [
   {
-    href: null,
+    href: undefined,
     title: "Training",
     tag: "coming soon",
     description: "Technique drills, off-snow conditioning, and balance work. From beginner parallel turns to expert carving.",
   },
   {
-    href: null,
+    href: undefined,
     title: "Equipment",
     tag: "coming soon",
     description: "Gear guides covering skis, boots, poles, helmets, safety equipment, and clothing with maintenance tips.",
