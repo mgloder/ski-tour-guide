@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 export default function EquipmentPage() {
   return (
     <div>
-      <div className="bx-container" style={{ paddingTop: "1.5rem", paddingBottom: "1rem", borderBottom: "3px solid currentColor" }}>
+      <div style={{ padding: "1.5rem 1.5rem 1rem", borderBottom: "3px solid currentColor" }}>
         <p className="bx-text-xs bx-uppercase bx-tracking-wide" style={{ opacity: 0.5 }}>Module 02</p>
         <h1 className="bx-display-2 bx-mb-0">Equipment</h1>
         <p className="bx-text-sm" style={{ opacity: 0.5 }}>Click a body zone to explore gear for that area.</p>

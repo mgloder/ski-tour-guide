@@ -20,13 +20,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>
         <Script src="/brutalix.js" strategy="afterInteractive" />
-        <Nav />
-        <main>{children}</main>
-        <footer className="bx-mt-6" style={{ borderTop: "3px solid currentColor", padding: "1.5rem", textAlign: "center", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.5 }}>
-          AI endpoint: <code>POST /api/mcp</code>
-          {" — "}
-          <a href="/llms.txt">llms.txt</a>
-        </footer>
+        <div style={{
+          maxWidth: "1100px",
+          margin: "0 auto",
+          border: "3px solid currentColor",
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+        }}>
+          <Nav />
+          <main style={{ flex: 1 }}>{children}</main>
+          <footer style={{ borderTop: "3px solid currentColor", padding: "1.5rem", textAlign: "center", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.5 }}>
+            AI endpoint: <code>POST /api/mcp</code>
+            {" — "}
+            <a href="/llms.txt">llms.txt</a>
+          </footer>
+        </div>
       </body>
     </html>
   );

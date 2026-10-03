@@ -1,8 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { equipment } from "@/data/equipment";
+import { equipment, type SkillLevel } from "@/data/equipment";
 import BodyMap, { type BodyZoneId } from "@/components/body-map";
+
+const SKILL_OPTIONS: { label: string; value: SkillLevel }[] = [
+  { label: "First timer",        value: "beginner" },
+  { label: "Getting comfortable", value: "intermediate" },
+  { label: "Experienced",        value: "advanced" },
+];
+
+type Scenario = "first-day" | "resort" | "offpiste" | "backcountry";
+const SCENARIO_OPTIONS: { label: string; value: Scenario; hint: string; itemIds: string[] | null }[] = [
+  { label: "First day on slopes", value: "first-day",   hint: "beginner area · instructor",
+    itemIds: ["ski-helmet", "alpine-ski-boots", "ski-poles", "ski-goggles", "ski-base-layer"] },
+  { label: "Ski resort",          value: "resort",      hint: "groomed pistes · lifts",
+    itemIds: ["all-mountain-skis", "alpine-ski-boots", "ski-poles", "ski-helmet", "ski-goggles", "ski-base-layer"] },
+  { label: "Off-piste",           value: "offpiste",    hint: "ungroomed terrain · powder",
+    itemIds: null },
+  { label: "Backcountry",         value: "backcountry", hint: "remote mountains · touring",
+    itemIds: null },
+];
+
+type SportType = "ski" | "snowboard";
+const SPORT_OPTIONS: { label: string; value: SportType; excludeIds: string[] }[] = [
+  { label: "Skis",       value: "ski",        excludeIds: [] },
+  { label: "Snowboard",  value: "snowboard",  excludeIds: ["all-mountain-skis", "alpine-ski-boots", "ski-poles"] },
+];
 
 type SubPart = {
   id: string;
@@ -69,6 +93,9 @@ const ZONES: Zone[] = [
 export default function EquipmentExplorer() {
   const [selectedZone, setSelectedZone] = useState<BodyZoneId | null>(null);
   const [selectedSub, setSelectedSub] = useState<string | null>(null);
+  const [selectedSkill, setSelectedSkill] = useState<SkillLevel | null>(null);
+  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+  const [selectedSport, setSelectedSport] = useState<SportType | null>(null);
 
   const activeZone = ZONES.find(z => z.id === selectedZone) ?? null;
   const activeSub = activeZone?.subParts.find(s => s.id === selectedSub) ?? null;
@@ -88,7 +115,26 @@ export default function EquipmentExplorer() {
   }
 
   const ids = activeSub?.equipmentIds ?? activeZone?.equipmentIds ?? null;
-  const filtered = ids ? equipment.filter(e => ids.includes(e.id)) : equipment;
+  const zoneFiltered = ids ? equipment.filter(e => ids.includes(e.id)) : equipment;
+
+  const scenarioIds = selectedScenario
+    ? (SCENARIO_OPTIONS.find(s => s.value === selectedScenario)?.itemIds ?? null)
+    : null;
+  const scenarioFiltered = scenarioIds
+    ? zoneFiltered.filter(e => scenarioIds.includes(e.id))
+    : zoneFiltered;
+
+  const skillFiltered = !selectedSkill
+    ? scenarioFiltered
+    : scenarioFiltered.filter(e => e.skillLevel === selectedSkill || e.skillLevel === "all");
+
+  const excludeIds = selectedSport
+    ? (SPORT_OPTIONS.find(s => s.value === selectedSport)?.excludeIds ?? [])
+    : [];
+
+  const filtered = excludeIds.length
+    ? skillFiltered.filter(e => !excludeIds.includes(e.id))
+    : skillFiltered;
 
   const breadcrumb = activeSub
     ? `${activeZone?.label} → ${activeSub.label}`
@@ -96,11 +142,61 @@ export default function EquipmentExplorer() {
     ? activeZone.label
     : "All Equipment";
 
+  const hasFilters = selectedSkill || selectedScenario || selectedSport;
+
   return (
+    <div>
+
+      {/* ── FILTER BAR ── */}
+      <div style={{ borderBottom: "3px solid currentColor", padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+
+        {/* Row 1: Skill */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.12em", opacity: 0.4, minWidth: "3.5rem" }}>I'm a</span>
+          {SKILL_OPTIONS.map(opt => (
+            <button key={opt.value}
+              onClick={() => setSelectedSkill(prev => prev === opt.value ? null : opt.value)}
+              className={`bx-btn bx-btn-xs ${selectedSkill === opt.value ? "bx-btn-primary" : "bx-btn-ghost"}`}
+            >{opt.label}</button>
+          ))}
+        </div>
+
+        {/* Row 2: Scenario */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.12em", opacity: 0.4, minWidth: "3.5rem" }}>Going to</span>
+          {SCENARIO_OPTIONS.map(opt => (
+            <button key={opt.value}
+              onClick={() => setSelectedScenario(prev => prev === opt.value ? null : opt.value)}
+              className={`bx-btn bx-btn-xs ${selectedScenario === opt.value ? "bx-btn-primary" : "bx-btn-ghost"}`}
+              title={opt.hint}
+            >{opt.label}</button>
+          ))}
+        </div>
+
+        {/* Row 3: Sport */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.12em", opacity: 0.4, minWidth: "3.5rem" }}>I ride</span>
+          {SPORT_OPTIONS.map(opt => (
+            <button key={opt.value}
+              onClick={() => setSelectedSport(prev => prev === opt.value ? null : opt.value)}
+              className={`bx-btn bx-btn-xs ${selectedSport === opt.value ? "bx-btn-primary" : "bx-btn-ghost"}`}
+            >{opt.label}</button>
+          ))}
+          {hasFilters && (
+            <button
+              onClick={() => { setSelectedSkill(null); setSelectedScenario(null); setSelectedSport(null); }}
+              className="bx-btn bx-btn-xs bx-btn-ghost"
+              style={{ opacity: 0.5, marginLeft: "auto" }}
+            >✕ Clear all</button>
+          )}
+        </div>
+
+      </div>
+
     <div style={{ display: "flex", gap: "0", alignItems: "flex-start" }}>
 
       {/* ── LEFT: Body map ── */}
-      <div style={{ width: "38%", minWidth: "220px", borderRight: "3px solid currentColor", padding: "1.5rem", position: "sticky", top: "0", maxHeight: "100vh", overflowY: "auto" }}>
+      <div style={{ width: "38%", minWidth: "220px", borderRight: "3px solid currentColor", padding: "1.5rem", position: "sticky", top: "0", alignSelf: "flex-start" }}>
 
         {/* SVG */}
         <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.5rem" }}>
@@ -224,6 +320,7 @@ export default function EquipmentExplorer() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

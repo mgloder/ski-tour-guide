@@ -22,7 +22,7 @@ const typeVariant: Record<ExerciseType, string> = {
 
 export default function ExercisePage() {
   return (
-    <div className="bx-container bx-py-6">
+    <div style={{ padding: "2rem 1.5rem" }}>
       <div className="bx-mb-6" style={{ borderBottom: "3px solid currentColor", paddingBottom: "1.5rem" }}>
         <p className="bx-text-xs bx-uppercase bx-tracking-wide" style={{ opacity: 0.5 }}>Module 01</p>
         <h1 className="bx-display-2 bx-mb-0">Exercise</h1>
