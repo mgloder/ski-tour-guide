@@ -118,6 +118,27 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
             "advanced","#991b1b","expert","#18181b","freeride","#18181b","#6b7280"],
           "line-width": 2, "line-opacity": 0.9,
         } });
+
+      // Fit camera to the full extent of the loaded pistes, but never zoom out
+      const coords = geojson.features
+        .filter(f => f.properties.kind === "piste")
+        .flatMap(f => f.geometry.coordinates as [number, number][]);
+      if (coords.length) {
+        let mnLng = coords[0][0], mxLng = coords[0][0];
+        let mnLat = coords[0][1], mxLat = coords[0][1];
+        for (const [lng, lat] of coords) {
+          if (lng < mnLng) mnLng = lng;
+          if (lng > mxLng) mxLng = lng;
+          if (lat < mnLat) mnLat = lat;
+          if (lat > mxLat) mxLat = lat;
+        }
+        // Only apply fitBounds if it wouldn't zoom out past 9 (avoids bleeding
+        // into neighbouring-resort pistes from the wide Overpass bbox query)
+        const cam = map.cameraForBounds([[mnLng, mnLat], [mxLng, mxLat]], { padding: 40, maxZoom: 14 });
+        if (cam && (cam.zoom as number) >= 9) {
+          map.easeTo({ ...cam, duration: 600 });
+        }
+      }
     }).catch(() => {});
   }
 
