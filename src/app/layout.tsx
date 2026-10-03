@@ -7,9 +7,41 @@ import "./globals.css";
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 
 export const metadata: Metadata = {
-  title: "The Ski Handbook — Exercise, Equipment & Places",
+  metadataBase: new URL("https://theskihandbook.com"),
+  title: {
+    default: "The Ski Handbook — Exercise, Equipment & Places",
+    template: "%s — The Ski Handbook",
+  },
   description:
-    "A human & AI-agent-friendly handbook for ski exercises, equipment, and destinations. Exposes an MCP endpoint for programmatic access.",
+    "Your complete mountain sport reference — ski exercises, gear guides, and resort destinations for skiers and snowboarders of every level.",
+  keywords: [
+    "ski guide", "ski equipment", "ski exercises", "ski resorts",
+    "snowboard guide", "backcountry skiing", "ski handbook",
+    "avalanche safety", "ski gear", "mountain sport",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://theskihandbook.com",
+    siteName: "The Ski Handbook",
+    title: "The Ski Handbook",
+    description:
+      "Your complete mountain sport reference — ski exercises, gear guides, and resort destinations for skiers and snowboarders of every level.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "The Ski Handbook",
+    description:
+      "Your complete mountain sport reference — ski exercises, gear guides, and resort destinations for skiers and snowboarders of every level.",
+  },
+  alternates: {
+    canonical: "https://theskihandbook.com",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

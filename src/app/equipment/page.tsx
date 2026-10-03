@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import EquipmentExplorer from "@/components/equipment-explorer";
 
 export const metadata: Metadata = {
-  title: "Equipment — The Ski Handbook",
-  description: "Human-centric ski equipment guide. Select a body zone to find the right gear.",
+  title: "Equipment",
+  description: "Ski and snowboard gear guides — helmets, boots, skis, poles, goggles, and avalanche safety equipment with maintenance tips.",
+  alternates: { canonical: "https://theskihandbook.com/equipment" },
+  openGraph: { url: "https://theskihandbook.com/equipment" },
 };
 
 export default function EquipmentPage() {

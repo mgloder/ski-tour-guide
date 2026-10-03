@@ -2,8 +2,10 @@ import { exercises, type Difficulty, type ExerciseType } from "@/data/exercises"
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Exercise — The Ski Handbook",
-  description: "Technique drills, conditioning, and balance exercises for skiers of all levels.",
+  title: "Exercise",
+  description: "Ski technique drills, off-snow conditioning, and balance exercises for all levels — from first-timers to expert carvers.",
+  alternates: { canonical: "https://theskihandbook.com/exercise" },
+  openGraph: { url: "https://theskihandbook.com/exercise" },
 };
 
 const difficultyVariant: Record<Difficulty, string> = {

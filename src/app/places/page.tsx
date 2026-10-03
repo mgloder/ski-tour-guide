@@ -2,8 +2,10 @@ import { places } from "@/data/places";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Places — The Ski Handbook",
-  description: "Resort and destination guides with piste data, altitude, and seasonal recommendations.",
+  title: "Places",
+  description: "Ski resort and mountain destination guides — piste breakdowns, altitude data, highlights, and best-season recommendations.",
+  alternates: { canonical: "https://theskihandbook.com/places" },
+  openGraph: { url: "https://theskihandbook.com/places" },
 };
 
 export default function PlacesPage() {
