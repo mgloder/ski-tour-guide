@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background -->
+  <rect width="32" height="32" rx="3" fill="#111"/>
+  <!-- Pages (right edge, warm cream) -->
+  <rect x="22" y="5" width="5" height="22" rx="1" fill="#e8dfc8"/>
+  <!-- Book cover -->
+  <rect x="5" y="5" width="18" height="22" fill="#f5f4f0"/>
+  <!-- Spine -->
+  <rect x="5" y="5" width="5" height="22" fill="#bbb"/>
+  <!-- Spine divider line -->
+  <rect x="9.5" y="5" width="1.5" height="22" fill="#888"/>
+  <!-- Text lines on cover -->
+  <rect x="13" y="10" width="8" height="2" fill="#1a1a1a"/>
+  <rect x="13" y="14" width="8" height="2" fill="#1a1a1a"/>
+  <rect x="13" y="18" width="5" height="2" fill="#1a1a1a"/>
+</svg>

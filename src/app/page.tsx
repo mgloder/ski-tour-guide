@@ -2,9 +2,9 @@ import Link from "next/link";
 
 const modules = [
   {
-    href: undefined,
+    href: "/training",
     title: "Training",
-    tag: "coming soon",
+    tag: "skill roadmap",
     description: "Technique drills, off-snow conditioning, and balance work. From beginner parallel turns to expert carving.",
   },
   {

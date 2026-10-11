@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import Nav from "@/components/nav";
+import ThemePanel from "@/components/theme-panel";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
@@ -70,6 +71,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <a href="/llms.txt">llms.txt</a>
           </footer>
         </div>
+
+        <ThemePanel />
       </body>
     </html>
   );
