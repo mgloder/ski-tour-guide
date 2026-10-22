@@ -26,3 +26,64 @@ details summary::-webkit-details-marker {
 .run-strip-cell:last-child {
   border-right: none;
 }
+
+/* ── Responsive: iPhone 14 (390px) and up to 640px ─────────────────────── */
+
+@media (max-width: 639px) {
+  /* Remove the outer border on small screens — it just eats viewport width */
+  .site-frame {
+    border-left: none !important;
+    border-right: none !important;
+  }
+
+  /* Ensure buttons have at least 44px touch target height (Apple HIG) */
+  .bx-btn {
+    min-height: 44px;
+  }
+
+  /* bx-btn-xs and bx-btn-sm get a touch target without changing their visual size */
+  .bx-btn-xs,
+  .bx-btn-sm {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Select elements */
+  select {
+    min-height: 44px;
+  }
+
+  /* Search / text inputs */
+  input[type="search"],
+  input[type="text"] {
+    min-height: 44px;
+  }
+
+  /* Places filter pills — bigger touch target */
+  .filter-pill {
+    min-height: 44px;
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  /* Compact header padding on mobile */
+  .page-header {
+    padding: 1rem 1rem 0 !important;
+  }
+
+  /* Map/list tab bar */
+  .map-list-tabs {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 640px) {
+  .map-list-tabs {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: none !important;
+  }
+}

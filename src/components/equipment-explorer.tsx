@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { equipment, type SkillLevel } from "@/data/equipment";
 import BodyMap, { type BodyZoneId } from "@/components/body-map";
+import { useIsMobile } from "@/lib/use-is-mobile";
 
 const SKILL_OPTIONS: { label: string; value: SkillLevel }[] = [
   { label: "First timer",        value: "beginner" },
@@ -91,6 +92,7 @@ const ZONES: Zone[] = [
 ];
 
 export default function EquipmentExplorer() {
+  const isMobile = useIsMobile();
   const [selectedZone, setSelectedZone] = useState<BodyZoneId | null>(null);
   const [selectedSub, setSelectedSub] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<SkillLevel | null>(null);
@@ -193,27 +195,52 @@ export default function EquipmentExplorer() {
 
       </div>
 
-    <div style={{ display: "flex", gap: "0", alignItems: "flex-start" }}>
+    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "0", alignItems: "flex-start" }}>
 
-      {/* ── LEFT: Body map ── */}
-      <div style={{ width: "38%", minWidth: "220px", borderRight: "3px solid currentColor", padding: "1.5rem", position: "sticky", top: "0", alignSelf: "flex-start" }}>
+      {/* ── LEFT (desktop) / TOP (mobile): Body map ── */}
+      <div style={{
+        width: isMobile ? "100%" : "38%",
+        minWidth: isMobile ? "unset" : "220px",
+        borderRight: isMobile ? "none" : "3px solid currentColor",
+        borderBottom: isMobile ? "3px solid currentColor" : "none",
+        padding: isMobile ? "1rem" : "1.5rem",
+        position: isMobile ? "relative" : "sticky",
+        top: "0",
+        alignSelf: "flex-start",
+      }}>
 
-        {/* SVG */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.5rem" }}>
-          <BodyMap activeZone={selectedZone} onZoneClick={handleZoneClick} />
-        </div>
+        {/* SVG — hidden on mobile */}
+        {!isMobile && (
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "1.5rem" }}>
+            <BodyMap activeZone={selectedZone} onZoneClick={handleZoneClick} />
+          </div>
+        )}
 
-        {/* Zone buttons */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "1rem" }}>
+        {/* Zone buttons — horizontal scroll row on mobile, vertical list on desktop */}
+        <div style={{
+          display: "flex",
+          flexDirection: isMobile ? "row" : "column",
+          gap: "0.4rem",
+          marginBottom: "1rem",
+          overflowX: isMobile ? "auto" : "visible",
+          paddingBottom: isMobile ? "0.25rem" : 0,
+        }}>
           {ZONES.map(zone => (
             <button
               key={zone.id}
               onClick={() => handleZoneClick(zone.id)}
               className={`bx-btn bx-btn-sm ${selectedZone === zone.id ? "bx-btn-primary" : "bx-btn-ghost"}`}
-              style={{ justifyContent: "space-between", display: "flex", width: "100%", textAlign: "left" }}
+              style={{
+                justifyContent: isMobile ? "center" : "space-between",
+                display: "flex",
+                width: isMobile ? "auto" : "100%",
+                flexShrink: isMobile ? 0 : undefined,
+                textAlign: "left",
+                whiteSpace: "nowrap",
+              }}
             >
               <span className="bx-fw-black bx-uppercase">{zone.label}</span>
-              <span style={{ opacity: 0.5, fontSize: "0.7rem", fontWeight: "normal", textTransform: "none" }}>{zone.hint}</span>
+              {!isMobile && <span style={{ opacity: 0.5, fontSize: "0.7rem", fontWeight: "normal", textTransform: "none" }}>{zone.hint}</span>}
             </button>
           ))}
         </div>

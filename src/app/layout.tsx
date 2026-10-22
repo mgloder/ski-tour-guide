@@ -55,7 +55,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>
         <Script src="/brutalix.js" strategy="afterInteractive" />
-        <div style={{
+        <div className="site-frame" style={{
           maxWidth: "1100px",
           margin: "0 auto",
           border: "3px solid currentColor",

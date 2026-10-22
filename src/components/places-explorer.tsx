@@ -6,6 +6,7 @@ import { getRecommendedEquipment, getRecommendedExercises } from "@/lib/places";
 import { equipment } from "@/data/equipment";
 import { exercises } from "@/data/exercises";
 import PlacesMap from "./places-map";
+import { useIsMobile } from "@/lib/use-is-mobile";
 
 // ── Filter / sort definitions ─────────────────────────────────────────────────
 
@@ -167,6 +168,8 @@ function RunStrip({ place }: { place: DbPlace }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
+  const isMobile = useIsMobile();
+  const [mobileTab,     setMobileTab]     = useState<"map" | "list">("map");
   const [level,         setLevel]         = useState<string | null>(null);
   const [terrain,       setTerrain]       = useState<string | null>(null);
   const [country,       setCountry]       = useState<string | null>(null);
@@ -228,7 +231,10 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     setSelected(prev => prev?.id === place.id ? null : place);
   }
 
-  function handleMapSelect(place: DbPlace) { setSelected(place); }
+  function handleMapSelect(place: DbPlace) {
+    setSelected(place);
+    if (isMobile) setMobileTab("list");
+  }
 
   function handleClusterSelect(ids: string[]) {
     setClusterIds(ids); setSelected(null); setVisible(PAGE);
@@ -242,7 +248,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 
       {/* ── Header + filters ── */}
-      <div style={{ padding: "1.5rem 1.5rem 0" }}>
+      <div style={{ padding: isMobile ? "0.75rem 1rem 0" : "1.5rem 1.5rem 0" }}>
         <div style={{ borderBottom: "3px solid currentColor", paddingBottom: "1.25rem", marginBottom: "1rem" }}>
           <p className="bx-text-xs bx-uppercase bx-tracking-wide" style={{ opacity: 0.5 }}>Module 03</p>
           <h1 className="bx-display-2 bx-mb-0">Places</h1>
@@ -355,11 +361,44 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
         )}
       </div>
 
+      {/* ── Mobile tab toggle ── */}
+      {isMobile && (
+        <div style={{ display: "flex", borderBottom: "3px solid currentColor", borderTop: "2px solid currentColor" }}>
+          {(["map", "list"] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setMobileTab(tab)}
+              style={{
+                flex: 1,
+                padding: "0.75rem",
+                border: "none",
+                borderRight: tab === "map" ? "2px solid currentColor" : "none",
+                background: mobileTab === tab ? "var(--bx-primary, #2b44ff)" : "transparent",
+                color: mobileTab === tab ? "#fff" : "inherit",
+                cursor: "pointer",
+                fontSize: "0.7rem",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                minHeight: "44px",
+              }}
+            >
+              {tab === "map" ? "🗺 Map" : `☰ List (${displayPlaces.length})`}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Map + list ── */}
       <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
 
-        {/* Map */}
-        <div style={{ flex: "0 0 62%", position: "relative", borderRight: "3px solid currentColor" }}>
+        {/* Map — hidden on mobile when list tab is active */}
+        <div style={{
+          flex: isMobile ? "1" : "0 0 62%",
+          position: "relative",
+          borderRight: isMobile ? "none" : "3px solid currentColor",
+          display: isMobile && mobileTab === "list" ? "none" : "block",
+        }}>
           <PlacesMap
             places={places}
             highlightedIds={highlightedIds}
@@ -370,8 +409,13 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           />
         </div>
 
-        {/* List */}
-        <div ref={listRef} style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        {/* List — hidden on mobile when map tab is active */}
+        <div ref={listRef} style={{
+          flex: 1,
+          overflowY: "auto",
+          display: isMobile && mobileTab === "map" ? "none" : "flex",
+          flexDirection: "column",
+        }}>
 
           {(clusterIds || selected) && (
             <button
