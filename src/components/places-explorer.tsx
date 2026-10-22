@@ -27,10 +27,10 @@ const TERRAIN_OPTIONS = [
 
 const SIZE_OPTIONS = [
   { value: null as string | null, label: "Any size", hint: "" },
-  { value: "S",  label: "S",  hint: "< 50 km"   },
-  { value: "M",  label: "M",  hint: "50–150 km"  },
-  { value: "L",  label: "L",  hint: "150–300 km" },
-  { value: "XL", label: "XL", hint: "300+ km"    },
+  { value: "S",  label: "S < 50 km",   hint: "< 50 km"   },
+  { value: "M",  label: "M 50–150 km", hint: "50–150 km"  },
+  { value: "L",  label: "L 150–300 km",hint: "150–300 km" },
+  { value: "XL", label: "XL 300+ km",  hint: "300+ km"    },
 ];
 
 const SORT_OPTIONS = [
@@ -77,7 +77,7 @@ function sortPlaces(places: DbPlace[], by: string): DbPlace[] {
   return [...places].sort((a, b) => (b.total_km ?? 0) - (a.total_km ?? 0));
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── Desktop sub-components ────────────────────────────────────────────────────
 
 function Pill({ label, hint, active, onClick }: { label: string; hint: string; active: boolean; onClick: () => void }) {
   return (
@@ -147,6 +147,27 @@ const selectStyle: React.CSSProperties = {
   paddingRight: "1.4rem",
 };
 
+// Mobile compact select — used in the filter strip on list view
+const mobileSelectStyle: React.CSSProperties = {
+  border: "2px solid currentColor",
+  background: "var(--bx-paper, #fff)",
+  color: "inherit",
+  padding: "0 0.5rem",
+  height: "44px",
+  fontSize: "0.7rem",
+  fontWeight: 700,
+  fontFamily: "inherit",
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  cursor: "pointer",
+  outline: "none",
+  appearance: "none",
+  WebkitAppearance: "none",
+  flexShrink: 0,
+  paddingRight: "1.2rem",
+  minWidth: "6rem",
+};
+
 function RunStrip({ place }: { place: DbPlace }) {
   const cells = [
     { bg: "#166534", n: place.runs_green, label: "G" },
@@ -200,13 +221,15 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
 
   const visiblePlaces = useMemo(() => displayPlaces.slice(0, visible), [displayPlaces, visible]);
 
-  // Active filter chips
+  const activeFilterCount = [level, terrain, country, size, query].filter(Boolean).length;
+
+  // Active filter chips (desktop)
   const chips = [
-    level   && { key: "level",   label: LEVEL_OPTIONS.find(o => o.value === level)?.label ?? level,   clear: () => reset({ level: null }) },
-    terrain && { key: "terrain", label: TERRAIN_OPTIONS.find(o => o.value === terrain)?.label ?? terrain, clear: () => reset({ terrain: null }) },
-    country && { key: "country", label: country,                                                          clear: () => reset({ country: null }) },
-    size    && { key: "size",    label: SIZE_OPTIONS.find(o => o.value === size)?.label ?? size,          clear: () => reset({ size: null }) },
-    query   && { key: "query",   label: `"${query}"`,                                                     clear: () => reset({ query: "" }) },
+    level   && { key: "level",   label: LEVEL_OPTIONS.find(o => o.value === level)?.label ?? level,       clear: () => reset({ level: null }) },
+    terrain && { key: "terrain", label: TERRAIN_OPTIONS.find(o => o.value === terrain)?.label ?? terrain,  clear: () => reset({ terrain: null }) },
+    country && { key: "country", label: country,                                                            clear: () => reset({ country: null }) },
+    size    && { key: "size",    label: SIZE_OPTIONS.find(o => o.value === size)?.label ?? size,            clear: () => reset({ size: null }) },
+    query   && { key: "query",   label: `"${query}"`,                                                       clear: () => reset({ query: "" }) },
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -244,11 +267,284 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     setClusterIds(null); setSelected(null); setVisible(PAGE);
   }
 
+  // ── MOBILE LAYOUT ─────────────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+
+        {/* Tab bar — always at top, slim */}
+        <div style={{ display: "flex", borderBottom: "3px solid currentColor", flexShrink: 0 }}>
+          {(["map", "list"] as const).map((tab, i) => (
+            <button
+              key={tab}
+              onClick={() => setMobileTab(tab)}
+              style={{
+                flex: 1,
+                height: "48px",
+                border: "none",
+                borderRight: i === 0 ? "2px solid currentColor" : "none",
+                background: mobileTab === tab ? "currentColor" : "transparent",
+                color: mobileTab === tab ? "var(--bx-paper, #fff)" : "inherit",
+                cursor: "pointer",
+                fontSize: "0.7rem",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.4rem",
+              }}
+            >
+              {tab === "map" ? "Map" : `List · ${displayPlaces.length}`}
+              {tab === "map" && activeFilterCount > 0 && (
+                <span style={{
+                  background: "var(--bx-primary, #2b44ff)",
+                  color: "#fff",
+                  borderRadius: "99px",
+                  padding: "0.1rem 0.4rem",
+                  fontSize: "0.6rem",
+                  fontWeight: 900,
+                }}>
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* ── MOBILE MAP VIEW — full height, no chrome ── */}
+        {mobileTab === "map" && (
+          <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+            <PlacesMap
+              places={places}
+              highlightedIds={highlightedIds}
+              selected={selected}
+              onSelect={handleMapSelect}
+              onClusterSelect={handleClusterSelect}
+              onBoundsChange={setMapVisibleIds}
+            />
+          </div>
+        )}
+
+        {/* ── MOBILE LIST VIEW — filter strip + list ── */}
+        {mobileTab === "list" && (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+
+            {/* Compact filter strip — horizontal scroll row of selects */}
+            <div style={{
+              flexShrink: 0,
+              borderBottom: "3px solid currentColor",
+              padding: "0.5rem 0.75rem",
+              display: "flex",
+              gap: "0.4rem",
+              overflowX: "auto",
+              alignItems: "center",
+              WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"],
+            }}>
+              {/* Search */}
+              <input
+                type="search"
+                placeholder="Search…"
+                value={query}
+                onChange={e => reset({ query: e.target.value })}
+                style={{
+                  height: "44px",
+                  border: "2px solid currentColor",
+                  background: "transparent",
+                  color: "inherit",
+                  padding: "0 0.6rem",
+                  fontSize: "0.8rem",
+                  fontFamily: "inherit",
+                  outline: "none",
+                  flexShrink: 0,
+                  width: "130px",
+                }}
+              />
+
+              {/* Level */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <select value={level ?? ""} onChange={e => reset({ level: e.target.value || null })} style={mobileSelectStyle}>
+                  <option value="">Level</option>
+                  {LEVEL_OPTIONS.filter(o => o.value).map(o => (
+                    <option key={String(o.value)} value={String(o.value)}>{o.label}</option>
+                  ))}
+                </select>
+                {level && <span style={{ position: "absolute", top: "-4px", right: "-4px", width: "8px", height: "8px", borderRadius: "50%", background: "var(--bx-primary,#2b44ff)" }} />}
+                <span style={{ position: "absolute", right: "0.35rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.55rem", opacity: 0.5 }}>▼</span>
+              </div>
+
+              {/* Terrain */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <select value={terrain ?? ""} onChange={e => reset({ terrain: e.target.value || null })} style={mobileSelectStyle}>
+                  <option value="">Terrain</option>
+                  {TERRAIN_OPTIONS.filter(o => o.value).map(o => (
+                    <option key={String(o.value)} value={String(o.value)}>{o.label}</option>
+                  ))}
+                </select>
+                {terrain && <span style={{ position: "absolute", top: "-4px", right: "-4px", width: "8px", height: "8px", borderRadius: "50%", background: "var(--bx-primary,#2b44ff)" }} />}
+                <span style={{ position: "absolute", right: "0.35rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.55rem", opacity: 0.5 }}>▼</span>
+              </div>
+
+              {/* Size */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <select value={size ?? ""} onChange={e => reset({ size: e.target.value || null })} style={mobileSelectStyle}>
+                  <option value="">Size</option>
+                  {SIZE_OPTIONS.filter(o => o.value).map(o => (
+                    <option key={String(o.value)} value={String(o.value)}>{o.label}</option>
+                  ))}
+                </select>
+                {size && <span style={{ position: "absolute", top: "-4px", right: "-4px", width: "8px", height: "8px", borderRadius: "50%", background: "var(--bx-primary,#2b44ff)" }} />}
+                <span style={{ position: "absolute", right: "0.35rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.55rem", opacity: 0.5 }}>▼</span>
+              </div>
+
+              {/* Country */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <select value={country ?? ""} onChange={e => reset({ country: e.target.value || null })} style={{ ...mobileSelectStyle, minWidth: "7rem" }}>
+                  <option value="">Country</option>
+                  {countries.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                {country && <span style={{ position: "absolute", top: "-4px", right: "-4px", width: "8px", height: "8px", borderRadius: "50%", background: "var(--bx-primary,#2b44ff)" }} />}
+                <span style={{ position: "absolute", right: "0.35rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.55rem", opacity: 0.5 }}>▼</span>
+              </div>
+
+              {/* Sort */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={mobileSelectStyle}>
+                  {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                <span style={{ position: "absolute", right: "0.35rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.55rem", opacity: 0.5 }}>▼</span>
+              </div>
+
+              {/* Clear all */}
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={clearAll}
+                  style={{ height: "44px", padding: "0 0.6rem", border: "2px solid currentColor", background: "transparent", cursor: "pointer", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0, color: "inherit" }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Scrollable list */}
+            <div ref={listRef} style={{ flex: 1, overflowY: "auto" }}>
+              {(clusterIds || selected) && (
+                <button
+                  onClick={clusterIds ? clearCluster : () => setSelected(null)}
+                  style={{ border: "none", borderBottom: "2px solid currentColor", background: "transparent", padding: "0.75rem 1rem", cursor: "pointer", textAlign: "left", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.5, width: "100%" }}
+                >
+                  ← {clusterIds ? `All ${filtered.length} places` : "All places"}
+                </button>
+              )}
+
+              {displayPlaces.length === 0 && (
+                <p className="bx-text-sm" style={{ padding: "1.5rem", opacity: 0.5 }}>No destinations match these filters.</p>
+              )}
+
+              {visiblePlaces.map(place => {
+                const isSelected = selected?.id === place.id;
+                const equipIds = getRecommendedEquipment(place.tags);
+                const exIds    = getRecommendedExercises(place.tags);
+                const equipItems = equipment.filter(e => equipIds.includes(e.id));
+                const exItems    = exercises.filter(e => exIds.includes(e.id));
+
+                return (
+                  <div
+                    key={place.id}
+                    onClick={() => handleSelect(place)}
+                    style={{
+                      padding: "0.875rem 1rem",
+                      borderBottom: "2px solid currentColor",
+                      cursor: "pointer",
+                      background: isSelected ? "var(--bx-primary, #2b44ff)" : "transparent",
+                      color: isSelected ? "#fff" : "inherit",
+                    }}
+                  >
+                    <p style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.6, marginBottom: "0.15rem" }}>
+                      {place.country} · {place.region}
+                    </p>
+                    <p style={{ fontWeight: 900, fontSize: "1rem", marginBottom: "0.2rem" }}>{place.name}</p>
+                    <div style={{ display: "flex", gap: "0.75rem", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.05em", opacity: isSelected ? 0.85 : 0.5, flexWrap: "wrap" }}>
+                      {place.total_km && <span>{place.total_km} km</span>}
+                      {place.altitude_peak && <span>{place.altitude_base}–{place.altitude_peak}m</span>}
+                      {place.difficulty && <span>{place.difficulty}</span>}
+                    </div>
+                    <RunStrip place={place} />
+
+                    {isSelected && (
+                      <div onClick={e => e.stopPropagation()} style={{ marginTop: "0.875rem", paddingTop: "0.875rem", borderTop: "2px solid rgba(255,255,255,0.3)", display: "flex", flexDirection: "column", gap: "0.75rem", color: "#fff" }}>
+                        <div>
+                          <p style={{ fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.7, marginBottom: "0.35rem" }}>Highlights</p>
+                          <ul style={{ paddingLeft: "1rem", margin: 0 }}>
+                            {place.highlights.slice(0, 3).map((h, i) => (
+                              <li key={i} style={{ fontSize: "0.8rem", marginBottom: "0.2rem", opacity: 0.9 }}>{h}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.7, marginBottom: "0.2rem" }}>Best months</p>
+                          <p style={{ fontSize: "0.8rem", opacity: 0.85 }}>{place.best_months.join(" · ")}</p>
+                        </div>
+                        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                          {place.website && (
+                            <a href={place.website} target="_blank" rel="noopener noreferrer" style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.5rem 0.75rem", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>
+                              Website →
+                            </a>
+                          )}
+                          {place.skimap_url && (
+                            <a href={place.skimap_url} target="_blank" rel="noopener noreferrer" style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.5rem 0.75rem", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>
+                              Trail map →
+                            </a>
+                          )}
+                        </div>
+                        {equipItems.length > 0 && (
+                          <div>
+                            <p style={{ fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.7, marginBottom: "0.35rem" }}>Gear</p>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
+                              {equipItems.map(e => (
+                                <Link key={e.id} href={`/equipment#${e.id}`} style={{ border: "1px solid rgba(255,255,255,0.5)", color: "#fff", padding: "0.35rem 0.5rem", fontSize: "0.7rem", textDecoration: "none" }}>{e.name}</Link>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {exItems.length > 0 && (
+                          <div>
+                            <p style={{ fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.7, marginBottom: "0.35rem" }}>Training</p>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
+                              {exItems.map(e => (
+                                <Link key={e.id} href={`/training#${e.id}`} style={{ border: "1px solid rgba(255,255,255,0.5)", color: "#fff", padding: "0.35rem 0.5rem", fontSize: "0.7rem", textDecoration: "none" }}>{e.name}</Link>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {visible < displayPlaces.length && (
+                <button
+                  onClick={() => setVisible(v => v + PAGE)}
+                  style={{ border: "none", borderTop: "2px solid currentColor", background: "transparent", padding: "1rem", cursor: "pointer", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", width: "100%", textAlign: "center", minHeight: "52px" }}
+                >
+                  Show {Math.min(PAGE, displayPlaces.length - visible)} more
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── DESKTOP LAYOUT (unchanged) ────────────────────────────────────────────
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 
-      {/* ── Header + filters ── */}
-      <div style={{ padding: isMobile ? "0.75rem 1rem 0" : "1.5rem 1.5rem 0" }}>
+      {/* Header + filters */}
+      <div style={{ padding: "1.5rem 1.5rem 0" }}>
         <div style={{ borderBottom: "3px solid currentColor", paddingBottom: "1.25rem", marginBottom: "1rem" }}>
           <p className="bx-text-xs bx-uppercase bx-tracking-wide" style={{ opacity: 0.5 }}>Module 03</p>
           <h1 className="bx-display-2 bx-mb-0">Places</h1>
@@ -277,25 +573,18 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           </div>
         </div>
 
-        {/* Country · Size · Sort — one compact row */}
+        {/* Country · Size · Sort */}
         <div style={{ marginBottom: "0.5rem", display: "flex", gap: "0.5rem", alignItems: "flex-end", flexWrap: "wrap" }}>
-          {/* Country */}
           <div>
             <p className="bx-text-xs bx-uppercase" style={{ opacity: 0.4, marginBottom: "0.4rem", letterSpacing: "0.08em" }}>Country</p>
             <div style={{ position: "relative", display: "inline-block" }}>
-              <select
-                value={country ?? ""}
-                onChange={e => reset({ country: e.target.value || null })}
-                style={selectStyle}
-              >
+              <select value={country ?? ""} onChange={e => reset({ country: e.target.value || null })} style={selectStyle}>
                 <option value="">All countries</option>
                 {countries.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
               <span style={{ position: "absolute", right: "0.4rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.6rem", opacity: 0.6 }}>▼</span>
             </div>
           </div>
-
-          {/* Size */}
           <div>
             <p className="bx-text-xs bx-uppercase" style={{ opacity: 0.4, marginBottom: "0.4rem", letterSpacing: "0.08em" }}>Resort size</p>
             <div style={{ display: "flex", gap: "0.35rem" }}>
@@ -304,16 +593,10 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
               ))}
             </div>
           </div>
-
-          {/* Sort */}
           <div style={{ marginLeft: "auto" }}>
             <p className="bx-text-xs bx-uppercase" style={{ opacity: 0.4, marginBottom: "0.4rem", letterSpacing: "0.08em" }}>Sort</p>
             <div style={{ position: "relative", display: "inline-block" }}>
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value)}
-                style={selectStyle}
-              >
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={selectStyle}>
                 {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <span style={{ position: "absolute", right: "0.4rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.6rem", opacity: 0.6 }}>▼</span>
@@ -328,17 +611,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
             placeholder={`Search ${places.length} destinations…`}
             value={query}
             onChange={e => reset({ query: e.target.value })}
-            style={{
-              width: "100%",
-              border: "2px solid currentColor",
-              background: "transparent",
-              color: "inherit",
-              padding: "0.4rem 0.75rem",
-              fontSize: "0.8rem",
-              fontFamily: "inherit",
-              outline: "none",
-              boxSizing: "border-box",
-            }}
+            style={{ width: "100%", border: "2px solid currentColor", background: "transparent", color: "inherit", padding: "0.4rem 0.75rem", fontSize: "0.8rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
           />
         </div>
 
@@ -346,59 +619,17 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
         {chips.length > 0 && (
           <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", alignItems: "center", paddingBottom: "0.75rem", borderBottom: "2px solid currentColor" }}>
             {chips.map(c => <FilterChip key={c.key} label={c.label} onRemove={c.clear} />)}
-            <button
-              onClick={clearAll}
-              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.4, padding: "0.2rem 0.25rem" }}
-            >
+            <button onClick={clearAll} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.4, padding: "0.2rem 0.25rem" }}>
               Clear all
             </button>
           </div>
         )}
-
-        {/* Search bottom border when no chips */}
-        {chips.length === 0 && (
-          <div style={{ borderBottom: "2px solid currentColor", marginBottom: 0 }} />
-        )}
+        {chips.length === 0 && <div style={{ borderBottom: "2px solid currentColor" }} />}
       </div>
 
-      {/* ── Mobile tab toggle ── */}
-      {isMobile && (
-        <div style={{ display: "flex", borderBottom: "3px solid currentColor", borderTop: "2px solid currentColor" }}>
-          {(["map", "list"] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setMobileTab(tab)}
-              style={{
-                flex: 1,
-                padding: "0.75rem",
-                border: "none",
-                borderRight: tab === "map" ? "2px solid currentColor" : "none",
-                background: mobileTab === tab ? "var(--bx-primary, #2b44ff)" : "transparent",
-                color: mobileTab === tab ? "#fff" : "inherit",
-                cursor: "pointer",
-                fontSize: "0.7rem",
-                fontWeight: 900,
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-                minHeight: "44px",
-              }}
-            >
-              {tab === "map" ? "🗺 Map" : `☰ List (${displayPlaces.length})`}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* ── Map + list ── */}
+      {/* Map + list */}
       <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
-
-        {/* Map — hidden on mobile when list tab is active */}
-        <div style={{
-          flex: isMobile ? "1" : "0 0 62%",
-          position: "relative",
-          borderRight: isMobile ? "none" : "3px solid currentColor",
-          display: isMobile && mobileTab === "list" ? "none" : "block",
-        }}>
+        <div style={{ flex: "0 0 62%", position: "relative", borderRight: "3px solid currentColor" }}>
           <PlacesMap
             places={places}
             highlightedIds={highlightedIds}
@@ -409,19 +640,9 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           />
         </div>
 
-        {/* List — hidden on mobile when map tab is active */}
-        <div ref={listRef} style={{
-          flex: 1,
-          overflowY: "auto",
-          display: isMobile && mobileTab === "map" ? "none" : "flex",
-          flexDirection: "column",
-        }}>
-
+        <div ref={listRef} style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
           {(clusterIds || selected) && (
-            <button
-              onClick={clusterIds ? clearCluster : () => setSelected(null)}
-              style={{ border: "none", borderBottom: "2px solid currentColor", background: "transparent", padding: "0.6rem 1rem", cursor: "pointer", textAlign: "left", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.5 }}
-            >
+            <button onClick={clusterIds ? clearCluster : () => setSelected(null)} style={{ border: "none", borderBottom: "2px solid currentColor", background: "transparent", padding: "0.6rem 1rem", cursor: "pointer", textAlign: "left", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.5 }}>
               ← {clusterIds ? `All ${filtered.length} places` : "All places"}
             </button>
           )}
@@ -441,41 +662,23 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
               <div
                 key={place.id}
                 onClick={() => handleSelect(place)}
-                style={{
-                  padding: "1rem 1.25rem",
-                  borderBottom: "2px solid currentColor",
-                  cursor: "pointer",
-                  background: isSelected ? "var(--bx-primary, #2b44ff)" : "transparent",
-                  color: isSelected ? "#fff" : "inherit",
-                  transition: "background 0.15s",
-                }}
+                style={{ padding: "1rem 1.25rem", borderBottom: "2px solid currentColor", cursor: "pointer", background: isSelected ? "var(--bx-primary, #2b44ff)" : "transparent", color: isSelected ? "#fff" : "inherit", transition: "background 0.15s" }}
               >
-                <p style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.6, marginBottom: "0.2rem" }}>
-                  {place.country} · {place.region}
-                </p>
+                <p style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.6, marginBottom: "0.2rem" }}>{place.country} · {place.region}</p>
                 <p style={{ fontWeight: 900, fontSize: "0.95rem", marginBottom: "0.25rem" }}>{place.name}</p>
-
                 <div style={{ display: "flex", gap: "1rem", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em", opacity: isSelected ? 0.85 : 0.55 }}>
                   <span>{place.total_km} km</span>
                   <span>{place.altitude_base}–{place.altitude_peak}m</span>
                   <span>{place.difficulty}</span>
                 </div>
-
                 <RunStrip place={place} />
-
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem", marginTop: "0.5rem" }}>
                   {place.tags.slice(0, 4).map(tag => (
-                    <span key={tag} style={{ border: `1px solid ${isSelected ? "rgba(255,255,255,0.5)" : "currentColor"}`, padding: "0.1rem 0.4rem", fontSize: "0.6rem", textTransform: "lowercase", opacity: 0.7 }}>
-                      {tag}
-                    </span>
+                    <span key={tag} style={{ border: `1px solid ${isSelected ? "rgba(255,255,255,0.5)" : "currentColor"}`, padding: "0.1rem 0.4rem", fontSize: "0.6rem", textTransform: "lowercase", opacity: 0.7 }}>{tag}</span>
                   ))}
                 </div>
-
                 {isSelected && (
-                  <div
-                    onClick={e => e.stopPropagation()}
-                    style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "2px solid rgba(255,255,255,0.3)", display: "flex", flexDirection: "column", gap: "0.75rem", color: "#fff" }}
-                  >
+                  <div onClick={e => e.stopPropagation()} style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "2px solid rgba(255,255,255,0.3)", display: "flex", flexDirection: "column", gap: "0.75rem", color: "#fff" }}>
                     <div>
                       <p style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.7, marginBottom: "0.4rem" }}>Highlights</p>
                       <ul style={{ paddingLeft: "1.1rem", margin: 0 }}>
@@ -484,51 +687,27 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
                         ))}
                       </ul>
                     </div>
-
                     <div>
                       <p style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.7, marginBottom: "0.2rem" }}>Best months</p>
                       <p style={{ fontSize: "0.75rem", opacity: 0.85 }}>{place.best_months.join(" · ")}</p>
                     </div>
-
                     <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                      {place.website && (
-                        <a href={place.website} target="_blank" rel="noopener noreferrer"
-                          style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.25rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>
-                          Website →
-                        </a>
-                      )}
-                      {place.skimap_url && (
-                        <a href={place.skimap_url} target="_blank" rel="noopener noreferrer"
-                          style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.25rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>
-                          Trail map →
-                        </a>
-                      )}
+                      {place.website && <a href={place.website} target="_blank" rel="noopener noreferrer" style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.25rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>Website →</a>}
+                      {place.skimap_url && <a href={place.skimap_url} target="_blank" rel="noopener noreferrer" style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.25rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>Trail map →</a>}
                     </div>
-
                     {equipItems.length > 0 && (
                       <div>
                         <p style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.7, marginBottom: "0.35rem" }}>Gear</p>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
-                          {equipItems.map(e => (
-                            <Link key={e.id} href={`/equipment#${e.id}`}
-                              style={{ border: "1px solid rgba(255,255,255,0.5)", color: "#fff", padding: "0.15rem 0.5rem", fontSize: "0.65rem", textDecoration: "none" }}>
-                              {e.name}
-                            </Link>
-                          ))}
+                          {equipItems.map(e => <Link key={e.id} href={`/equipment#${e.id}`} style={{ border: "1px solid rgba(255,255,255,0.5)", color: "#fff", padding: "0.15rem 0.5rem", fontSize: "0.65rem", textDecoration: "none" }}>{e.name}</Link>)}
                         </div>
                       </div>
                     )}
-
                     {exItems.length > 0 && (
                       <div>
                         <p style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.7, marginBottom: "0.35rem" }}>Training</p>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
-                          {exItems.map(e => (
-                            <Link key={e.id} href={`/training#${e.id}`}
-                              style={{ border: "1px solid rgba(255,255,255,0.5)", color: "#fff", padding: "0.15rem 0.5rem", fontSize: "0.65rem", textDecoration: "none" }}>
-                              {e.name}
-                            </Link>
-                          ))}
+                          {exItems.map(e => <Link key={e.id} href={`/training#${e.id}`} style={{ border: "1px solid rgba(255,255,255,0.5)", color: "#fff", padding: "0.15rem 0.5rem", fontSize: "0.65rem", textDecoration: "none" }}>{e.name}</Link>)}
                         </div>
                       </div>
                     )}
@@ -539,10 +718,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           })}
 
           {visible < displayPlaces.length && (
-            <button
-              onClick={() => setVisible(v => v + PAGE)}
-              style={{ border: "none", borderTop: "2px solid currentColor", background: "transparent", padding: "0.75rem 1.25rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", width: "100%", textAlign: "center" }}
-            >
+            <button onClick={() => setVisible(v => v + PAGE)} style={{ border: "none", borderTop: "2px solid currentColor", background: "transparent", padding: "0.75rem 1.25rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", width: "100%", textAlign: "center" }}>
               Show {Math.min(PAGE, displayPlaces.length - visible)} more
               <span style={{ opacity: 0.4, marginLeft: "0.5rem" }}>({displayPlaces.length - visible} remaining)</span>
             </button>
