@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
-const D = 0.3;
+// Allow up to 60s — Overpass can take 30-40s for large resorts
+export const maxDuration = 60;
+
+const D = 0.22; // ±0.22° bbox — keeps response <500KB for most resorts
 
 async function fetchFromOverpass(lat: number, lng: number, signal: AbortSignal) {
   const bbox = `${lat - D},${lng - D},${lat + D},${lng + D}`;
-  const q = `[out:json][timeout:30];(way["piste:type"="downhill"](${bbox});way["aerialway"](${bbox}););out geom;`;
-  const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`, { signal });
+  const q = `[out:json][timeout:25];(way["piste:type"="downhill"](${bbox});way["aerialway"](${bbox}););out geom;`;
+  const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`, {
+    signal,
+    headers: { "User-Agent": "ski-tour-guide/1.0 (admin@theskihandbook.com)" },
+  });
   if (!res.ok) throw new Error(`Overpass HTTP ${res.status}`);
   const j = await res.json() as {
     elements: Array<{ type: string; geometry: { lat: number; lon: number }[]; tags?: Record<string, string> }>;
@@ -31,39 +37,51 @@ export async function GET(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
 
   // 1. Try DB cache (valid for 30 days)
-  const cached = await sql`
-    SELECT geojson FROM piste_cache
-    WHERE place_id = ${id} AND fetched_at > now() - interval '30 days'
-    LIMIT 1
-  `;
-  if (cached.length > 0) {
-    return NextResponse.json(cached[0].geojson, {
-      headers: { "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800" },
-    });
+  try {
+    const cached = await sql`
+      SELECT geojson FROM piste_cache
+      WHERE place_id = ${id} AND fetched_at > now() - interval '30 days'
+      LIMIT 1
+    `;
+    if (cached.length > 0) {
+      return NextResponse.json(cached[0].geojson, {
+        headers: { "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800" },
+      });
+    }
+  } catch {
+    // Table may not exist yet — fall through to Overpass
   }
 
-  // 2. Cache miss — look up coordinates and fetch from Overpass
+  // 2. Cache miss — look up coordinates
   const place = await sql`SELECT latitude, longitude FROM places WHERE id = ${id} LIMIT 1`;
   if (!place.length || !place[0].latitude) {
     return NextResponse.json({ error: "place not found" }, { status: 404 });
   }
   const { latitude, longitude } = place[0] as { latitude: number; longitude: number };
 
+  // 3. Fetch from Overpass
   try {
-    const geojson = await fetchFromOverpass(latitude, longitude, AbortSignal.timeout(35_000));
+    const geojson = await fetchFromOverpass(latitude, longitude, AbortSignal.timeout(50_000));
 
-    // Store in cache (best-effort — don't fail the request if this errors)
+    // Ensure cache table exists and store result
     sql`
+      CREATE TABLE IF NOT EXISTS piste_cache (
+        place_id   VARCHAR(100) PRIMARY KEY,
+        geojson    JSONB        NOT NULL,
+        fetched_at TIMESTAMPTZ  NOT NULL DEFAULT now()
+      )
+    `.then(() => sql`
       INSERT INTO piste_cache (place_id, geojson, fetched_at)
       VALUES (${id}, ${JSON.stringify(geojson)}, now())
       ON CONFLICT (place_id) DO UPDATE
         SET geojson = EXCLUDED.geojson, fetched_at = now()
-    `.catch(() => {});
+    `).catch(() => {});
 
     return NextResponse.json(geojson, {
       headers: { "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800" },
     });
-  } catch {
+  } catch (e) {
+    console.error(`[pistes] ${id} failed:`, e);
     return NextResponse.json({ error: "trail data unavailable" }, { status: 503 });
   }
 }
