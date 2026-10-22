@@ -24,7 +24,7 @@ export default async function PlacesPage() {
     );
   }
   return (
-    <div style={{ height: "calc(100vh - 64px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ height: "calc(100dvh - 64px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <PlacesExplorer places={places} />
     </div>
   );

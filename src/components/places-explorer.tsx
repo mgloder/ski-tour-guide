@@ -315,7 +315,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
 
         {/* ── MOBILE MAP VIEW — full height, no chrome ── */}
         {mobileTab === "map" && (
-          <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+          <div style={{ flex: 1, position: "relative", minHeight: 0, overflow: "hidden" }}>
             <PlacesMap
               places={places}
               highlightedIds={highlightedIds}
@@ -629,7 +629,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
 
       {/* Map + list */}
       <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
-        <div style={{ flex: "0 0 62%", position: "relative", borderRight: "3px solid currentColor" }}>
+        <div style={{ flex: "0 0 62%", position: "relative", borderRight: "3px solid currentColor", height: "100%" }}>
           <PlacesMap
             places={places}
             highlightedIds={highlightedIds}
