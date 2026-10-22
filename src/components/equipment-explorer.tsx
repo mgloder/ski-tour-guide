@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { equipment, type SkillLevel } from "@/data/equipment";
 import BodyMap, { type BodyZoneId } from "@/components/body-map";
 import { useIsMobile } from "@/lib/use-is-mobile";
@@ -146,54 +146,115 @@ export default function EquipmentExplorer() {
 
   const hasFilters = selectedSkill || selectedScenario || selectedSport;
 
+  const mobileSelectStyle: React.CSSProperties = {
+    border: "2px solid currentColor",
+    background: "var(--bx-paper, #fff)",
+    color: "inherit",
+    padding: "0 1.2rem 0 0.5rem",
+    height: "44px",
+    fontSize: "0.7rem",
+    fontWeight: 700,
+    fontFamily: "inherit",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    cursor: "pointer",
+    outline: "none",
+    appearance: "none",
+    WebkitAppearance: "none",
+    flexShrink: 0,
+    minWidth: "7rem",
+  };
+
+  const filterBar = isMobile ? (
+    /* ── MOBILE: single horizontal-scrolling row of <select> dropdowns ── */
+    <div style={{ borderBottom: "3px solid currentColor", padding: "0.5rem 0.75rem", display: "flex", gap: "0.4rem", overflowX: "auto", alignItems: "center" }}>
+      <select
+        value={selectedSkill ?? ""}
+        onChange={e => setSelectedSkill((e.target.value as SkillLevel) || null)}
+        style={{ ...mobileSelectStyle, outline: selectedSkill ? "2px solid currentColor" : "none", outlineOffset: "-3px" }}
+        aria-label="Skill level"
+      >
+        <option value="">All levels</option>
+        {SKILL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      <select
+        value={selectedScenario ?? ""}
+        onChange={e => setSelectedScenario((e.target.value as Scenario) || null)}
+        style={{ ...mobileSelectStyle, outline: selectedScenario ? "2px solid currentColor" : "none", outlineOffset: "-3px" }}
+        aria-label="Scenario"
+      >
+        <option value="">All scenarios</option>
+        {SCENARIO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      <select
+        value={selectedSport ?? ""}
+        onChange={e => setSelectedSport((e.target.value as SportType) || null)}
+        style={{ ...mobileSelectStyle, outline: selectedSport ? "2px solid currentColor" : "none", outlineOffset: "-3px" }}
+        aria-label="Sport"
+      >
+        <option value="">All sports</option>
+        {SPORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      {hasFilters && (
+        <button
+          onClick={() => { setSelectedSkill(null); setSelectedScenario(null); setSelectedSport(null); }}
+          className="bx-btn bx-btn-xs bx-btn-ghost"
+          style={{ flexShrink: 0, opacity: 0.6 }}
+        >✕</button>
+      )}
+    </div>
+  ) : (
+    /* ── DESKTOP: three rows of pill buttons ── */
+    <div style={{ borderBottom: "3px solid currentColor", padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+
+      {/* Row 1: Skill */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.12em", opacity: 0.4, minWidth: "3.5rem" }}>I'm a</span>
+        {SKILL_OPTIONS.map(opt => (
+          <button key={opt.value}
+            onClick={() => setSelectedSkill(prev => prev === opt.value ? null : opt.value)}
+            className={`bx-btn bx-btn-xs ${selectedSkill === opt.value ? "bx-btn-primary" : "bx-btn-ghost"}`}
+          >{opt.label}</button>
+        ))}
+      </div>
+
+      {/* Row 2: Scenario */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.12em", opacity: 0.4, minWidth: "3.5rem" }}>Going to</span>
+        {SCENARIO_OPTIONS.map(opt => (
+          <button key={opt.value}
+            onClick={() => setSelectedScenario(prev => prev === opt.value ? null : opt.value)}
+            className={`bx-btn bx-btn-xs ${selectedScenario === opt.value ? "bx-btn-primary" : "bx-btn-ghost"}`}
+            title={opt.hint}
+          >{opt.label}</button>
+        ))}
+      </div>
+
+      {/* Row 3: Sport */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.12em", opacity: 0.4, minWidth: "3.5rem" }}>I ride</span>
+        {SPORT_OPTIONS.map(opt => (
+          <button key={opt.value}
+            onClick={() => setSelectedSport(prev => prev === opt.value ? null : opt.value)}
+            className={`bx-btn bx-btn-xs ${selectedSport === opt.value ? "bx-btn-primary" : "bx-btn-ghost"}`}
+          >{opt.label}</button>
+        ))}
+        {hasFilters && (
+          <button
+            onClick={() => { setSelectedSkill(null); setSelectedScenario(null); setSelectedSport(null); }}
+            className="bx-btn bx-btn-xs bx-btn-ghost"
+            style={{ opacity: 0.5, marginLeft: "auto" }}
+          >✕ Clear all</button>
+        )}
+      </div>
+
+    </div>
+  );
+
   return (
     <div>
 
-      {/* ── FILTER BAR ── */}
-      <div style={{ borderBottom: "3px solid currentColor", padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-
-        {/* Row 1: Skill */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.12em", opacity: 0.4, minWidth: "3.5rem" }}>I'm a</span>
-          {SKILL_OPTIONS.map(opt => (
-            <button key={opt.value}
-              onClick={() => setSelectedSkill(prev => prev === opt.value ? null : opt.value)}
-              className={`bx-btn bx-btn-xs ${selectedSkill === opt.value ? "bx-btn-primary" : "bx-btn-ghost"}`}
-            >{opt.label}</button>
-          ))}
-        </div>
-
-        {/* Row 2: Scenario */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.12em", opacity: 0.4, minWidth: "3.5rem" }}>Going to</span>
-          {SCENARIO_OPTIONS.map(opt => (
-            <button key={opt.value}
-              onClick={() => setSelectedScenario(prev => prev === opt.value ? null : opt.value)}
-              className={`bx-btn bx-btn-xs ${selectedScenario === opt.value ? "bx-btn-primary" : "bx-btn-ghost"}`}
-              title={opt.hint}
-            >{opt.label}</button>
-          ))}
-        </div>
-
-        {/* Row 3: Sport */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.12em", opacity: 0.4, minWidth: "3.5rem" }}>I ride</span>
-          {SPORT_OPTIONS.map(opt => (
-            <button key={opt.value}
-              onClick={() => setSelectedSport(prev => prev === opt.value ? null : opt.value)}
-              className={`bx-btn bx-btn-xs ${selectedSport === opt.value ? "bx-btn-primary" : "bx-btn-ghost"}`}
-            >{opt.label}</button>
-          ))}
-          {hasFilters && (
-            <button
-              onClick={() => { setSelectedSkill(null); setSelectedScenario(null); setSelectedSport(null); }}
-              className="bx-btn bx-btn-xs bx-btn-ghost"
-              style={{ opacity: 0.5, marginLeft: "auto" }}
-            >✕ Clear all</button>
-          )}
-        </div>
-
-      </div>
+      {filterBar}
 
     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "0", alignItems: "flex-start" }}>
 
