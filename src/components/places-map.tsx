@@ -375,44 +375,47 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           pointerEvents: "none",
         }} />
       )}
-      {/* Piste fetch in-progress badge (separate from map tile loading) */}
-      {pisteLoading && !loading && (
+      {/* Piste fetch: full-width top bar */}
+      {pisteLoading && (
         <div style={{
-          position: "absolute", bottom: "1rem", left: "1rem",
-          padding: "0.3rem 0.6rem",
-          background: "rgba(255,255,255,0.92)",
-          border: "2px solid currentColor",
-          fontSize: "0.7rem",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
+          position: "absolute", top: 0, left: 0, right: 0,
+          background: "var(--bx-primary, #2b44ff)",
+          color: "#fff",
+          padding: "0.6rem 1rem",
           display: "flex",
           alignItems: "center",
-          gap: "0.4rem",
+          gap: "0.75rem",
           pointerEvents: "none",
+          zIndex: 10,
         }}>
           <span style={{
             display: "inline-block",
-            width: 10, height: 10,
-            border: "2px solid rgba(0,0,0,0.12)",
-            borderTopColor: "var(--bx-primary, #2b44ff)",
+            width: 16, height: 16,
+            border: "2.5px solid rgba(255,255,255,0.35)",
+            borderTopColor: "#fff",
             borderRadius: "50%",
             animation: "map-spin 0.75s linear infinite",
             flexShrink: 0,
           }} />
-          Loading trails…
+          <span style={{ fontSize: "0.75rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            Loading ski trails…
+          </span>
         </div>
       )}
       {pisteError && !pisteLoading && (
         <div style={{
-          position: "absolute", bottom: "1rem", left: "1rem",
-          padding: "0.25rem 0.5rem",
-          background: "rgba(255,255,255,0.9)",
-          border: "1px solid currentColor",
+          position: "absolute", top: 0, left: 0, right: 0,
+          background: "#991b1b",
+          color: "#fff",
+          padding: "0.6rem 1rem",
           fontSize: "0.75rem",
+          fontWeight: 900,
+          textTransform: "uppercase",
+          letterSpacing: "0.1em",
           pointerEvents: "none",
+          zIndex: 10,
         }}>
-          Piste data unavailable
+          Trail data unavailable — try again later
         </div>
       )}
       <style>{`@keyframes map-spin { to { transform: rotate(360deg); } }`}</style>
