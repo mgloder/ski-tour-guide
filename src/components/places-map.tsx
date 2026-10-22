@@ -17,23 +17,10 @@ function buildGeoJSON(places: DbPlace[], highlightedIds: string[], selectedId: s
   };
 }
 
-async function fetchPistes(lat: number, lng: number, signal: AbortSignal) {
-  const d = 0.22;
-  const bbox = `${lat - d},${lng - d},${lat + d},${lng + d}`;
-  const q = `[out:json][timeout:25];(way["piste:type"="downhill"](${bbox});way["aerialway"](${bbox}););out geom;`;
-  const r = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`, { signal });
-  const j = await r.json();
-  type El = { type: string; geometry: { lat: number; lon: number }[]; tags?: Record<string, string> };
-  return {
-    type: "FeatureCollection" as const,
-    features: (j.elements as El[])
-      .filter(el => el.type === "way" && el.geometry?.length > 1)
-      .map(el => ({
-        type: "Feature" as const,
-        geometry: { type: "LineString" as const, coordinates: el.geometry.map(p => [p.lon, p.lat]) },
-        properties: { kind: el.tags?.["piste:type"] ? "piste" : "lift", difficulty: el.tags?.["piste:difficulty"] ?? "unknown" },
-      })),
-  };
+async function fetchPistes(placeId: string, signal: AbortSignal) {
+  const res = await fetch(`/api/pistes?id=${encodeURIComponent(placeId)}`, { signal });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json() as Promise<{ type: "FeatureCollection"; features: { type: "Feature"; geometry: { type: "LineString"; coordinates: [number, number][] }; properties: { kind: string; difficulty: string } }[] }>;
 }
 
 function safeBounds(places: DbPlace[]) {
@@ -107,11 +94,10 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
 
     const abort = new AbortController();
     pisteAbortRef.current = abort;
-    // Client-side timeout: abort after 35s if Overpass hasn't responded
-    const timeoutId = setTimeout(() => abort.abort(), 35_000);
+    const timeoutId = setTimeout(() => abort.abort(), 40_000);
     setPisteLoading(true);
 
-    fetchPistes(place.latitude, place.longitude, abort.signal).then(geojson => {
+    fetchPistes(place.id, abort.signal).then(geojson => {
       clearTimeout(timeoutId);
       if (abort.signal.aborted) return;
       setPisteLoading(false);
