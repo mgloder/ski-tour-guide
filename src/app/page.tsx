@@ -8,9 +8,9 @@ const modules = [
     description: "Technique drills, off-snow conditioning, and balance work. From beginner parallel turns to expert carving.",
   },
   {
-    href: undefined,
+    href: "/equipment",
     title: "Equipment",
-    tag: "coming soon",
+    tag: "gear guide",
     description: "Gear guides covering skis, boots, poles, helmets, safety equipment, and clothing with maintenance tips.",
   },
   {

@@ -149,6 +149,7 @@ async function handleToolCall(name: string, args: Record<string, unknown>): Prom
       }));
     }
     case "ski_get_exercise": {
+      if (typeof args.id !== "string") throw { code: -32602, message: "id must be a string" };
       const exercise = exercises.find(e => e.id === args.id);
       if (!exercise) throw { code: -32602, message: `Exercise '${args.id}' not found` };
       return exercise;
@@ -162,6 +163,7 @@ async function handleToolCall(name: string, args: Record<string, unknown>): Prom
       }));
     }
     case "ski_get_equipment": {
+      if (typeof args.id !== "string") throw { code: -32602, message: "id must be a string" };
       const item = equipment.find(e => e.id === args.id);
       if (!item) throw { code: -32602, message: `Equipment '${args.id}' not found` };
       return item;
@@ -169,25 +171,28 @@ async function handleToolCall(name: string, args: Record<string, unknown>): Prom
     case "ski_list_places": {
       let places = await getPlaces();
 
-      if (args.country) {
-        const c = (args.country as string).toLowerCase();
+      if (typeof args.country === "string" && args.country) {
+        const c = args.country.toLowerCase();
         places = places.filter(p => p.country?.toLowerCase() === c);
       }
-      if (args.difficulty && args.difficulty !== "all") {
+      if (typeof args.difficulty === "string" && args.difficulty && args.difficulty !== "all") {
         places = places.filter(p => p.difficulty === args.difficulty);
       }
-      if (args.tags && Array.isArray(args.tags) && args.tags.length > 0) {
-        const tags = args.tags as string[];
+      if (Array.isArray(args.tags) && args.tags.length > 0) {
+        const tags = args.tags.filter((t): t is string => typeof t === "string");
         places = places.filter(p => tags.some(t => p.tags.includes(t)));
       }
-      if (args.min_km != null) {
-        places = places.filter(p => (p.total_km ?? 0) >= (args.min_km as number));
+      if (typeof args.min_km === "number") {
+        const minKm = args.min_km;
+        places = places.filter(p => (p.total_km ?? 0) >= minKm);
       }
-      if (args.max_km != null) {
-        places = places.filter(p => (p.total_km ?? 0) <= (args.max_km as number));
+      if (typeof args.max_km === "number") {
+        const maxKm = args.max_km;
+        places = places.filter(p => (p.total_km ?? 0) <= maxKm);
       }
 
-      const limit = Math.min(Number(args.limit ?? 50), 200);
+      const rawLimit = typeof args.limit === "number" ? args.limit : 50;
+      const limit = Math.min(rawLimit, 200);
       return places.slice(0, limit).map(({
         id, name, country, region, description,
         total_km, altitude_base, altitude_peak,
@@ -199,7 +204,8 @@ async function handleToolCall(name: string, args: Record<string, unknown>): Prom
       }));
     }
     case "ski_get_place": {
-      const place = await getPlace(args.id as string);
+      if (typeof args.id !== "string") throw { code: -32602, message: "id must be a string" };
+      const place = await getPlace(args.id);
       if (!place) throw { code: -32602, message: `Place '${args.id}' not found` };
       return place;
     }

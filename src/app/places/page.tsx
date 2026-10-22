@@ -11,7 +11,18 @@ export const metadata: Metadata = {
 };
 
 export default async function PlacesPage() {
-  const places = await getPlaces();
+  let places;
+  try {
+    places = await getPlaces();
+  } catch {
+    return (
+      <div style={{ padding: "2rem 1.5rem" }}>
+        <p className="bx-text-sm" style={{ opacity: 0.6 }}>
+          Unable to load destinations. Please try again later.
+        </p>
+      </div>
+    );
+  }
   return (
     <div style={{ height: "calc(100vh - 64px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <PlacesExplorer places={places} />

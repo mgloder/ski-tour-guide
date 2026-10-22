@@ -46,6 +46,7 @@ export default function ResortMap({ lat, lng }: { lat: number; lng: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<unknown>(null);
   const loadedRef = useRef(false);
+  const errorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -113,7 +114,7 @@ export default function ResortMap({ lat, lng }: { lat: number; lng: number }) {
               );
             }
           } catch {
-            // base map still shows even if piste fetch fails
+            if (errorRef.current) errorRef.current.style.display = "block";
           }
         });
       });
@@ -136,6 +137,17 @@ export default function ResortMap({ lat, lng }: { lat: number; lng: number }) {
   return (
     <div style={{ height: 300, border: "2px solid currentColor", overflow: "hidden", position: "relative" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+      <div ref={errorRef} style={{
+        display: "none",
+        position: "absolute", bottom: "0.5rem", left: "0.5rem",
+        padding: "0.2rem 0.4rem",
+        background: "rgba(255,255,255,0.9)",
+        border: "1px solid currentColor",
+        fontSize: "0.7rem",
+        pointerEvents: "none",
+      }}>
+        Piste data unavailable
+      </div>
     </div>
   );
 }

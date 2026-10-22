@@ -61,6 +61,7 @@ type Props = {
 
 export default function PlacesMap({ places, highlightedIds, selected, onSelect, onClusterSelect, onBoundsChange }: Props) {
   const [loading, setLoading]      = useState(true);
+  const [pisteError, setPisteError] = useState(false);
   const containerRef               = useRef<HTMLDivElement>(null);
   const mapRef                     = useRef<any>(null);
   const mapReadyRef                = useRef(false);
@@ -85,6 +86,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
     // Cancel any in-flight piste request and clear previous overlay
     pisteAbortRef.current?.abort();
     pisteAbortRef.current = null;
+    setPisteError(false);
     if (map.getLayer("pistes")) map.removeLayer("pistes");
     if (map.getLayer("lifts"))  map.removeLayer("lifts");
     if (map.getSource("ski"))   map.removeSource("ski");
@@ -144,7 +146,11 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
         }
       }
       setLoading(false);
-    }).catch(() => { setLoading(false); });
+    }).catch((e) => {
+      if (abort.signal.aborted) return;
+      setLoading(false);
+      setPisteError(true);
+    });
   }
 
   // ── Init map once ─────────────────────────────────────────────────────────
@@ -363,6 +369,18 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           animation: "map-spin 0.75s linear infinite",
           pointerEvents: "none",
         }} />
+      )}
+      {pisteError && !loading && (
+        <div style={{
+          position: "absolute", bottom: "1rem", left: "1rem",
+          padding: "0.25rem 0.5rem",
+          background: "rgba(255,255,255,0.9)",
+          border: "1px solid currentColor",
+          fontSize: "0.75rem",
+          pointerEvents: "none",
+        }}>
+          Piste data unavailable
+        </div>
       )}
       <style>{`@keyframes map-spin { to { transform: rotate(360deg); } }`}</style>
     </div>
