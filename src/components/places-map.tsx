@@ -60,8 +60,9 @@ type Props = {
 };
 
 export default function PlacesMap({ places, highlightedIds, selected, onSelect, onClusterSelect, onBoundsChange }: Props) {
-  const [loading, setLoading]      = useState(true);
-  const [pisteError, setPisteError] = useState(false);
+  const [loading, setLoading]            = useState(true);
+  const [pisteLoading, setPisteLoading]  = useState(false);
+  const [pisteError, setPisteError]      = useState(false);
   const containerRef               = useRef<HTMLDivElement>(null);
   const mapRef                     = useRef<any>(null);
   const mapReadyRef                = useRef(false);
@@ -92,6 +93,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
     if (map.getSource("ski"))   map.removeSource("ski");
 
     if (!place) {
+      setPisteLoading(false);
       const b = safeBounds(placesRef.current.filter(p => highlightedRef.current.includes(p.id)));
       if (b) map.fitBounds(
         [[b.minLng - 4, b.minLat - 2], [b.maxLng + 4, b.maxLat + 2]],
@@ -105,13 +107,15 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
 
     const abort = new AbortController();
     pisteAbortRef.current = abort;
-    setLoading(true);
+    // Client-side timeout: abort after 35s if Overpass hasn't responded
+    const timeoutId = setTimeout(() => abort.abort(), 35_000);
+    setPisteLoading(true);
 
     fetchPistes(place.latitude, place.longitude, abort.signal).then(geojson => {
-      if (abort.signal.aborted || !mapRef.current || map.getSource("ski")) {
-        if (!abort.signal.aborted) setLoading(false);
-        return;
-      }
+      clearTimeout(timeoutId);
+      if (abort.signal.aborted) return;
+      setPisteLoading(false);
+      if (!mapRef.current || map.getSource("ski")) return;
       map.addSource("ski", { type: "geojson", data: geojson });
       map.addLayer({ id: "lifts", type: "line", source: "ski",
         filter: ["==", ["get", "kind"], "lift"],
@@ -145,10 +149,10 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           map.easeTo({ ...cam, duration: 600 });
         }
       }
-      setLoading(false);
-    }).catch((e) => {
+    }).catch(() => {
+      clearTimeout(timeoutId);
       if (abort.signal.aborted) return;
-      setLoading(false);
+      setPisteLoading(false);
       setPisteError(true);
     });
   }
@@ -359,6 +363,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+      {/* Map tile loading spinner */}
       {loading && (
         <div style={{
           position: "absolute", bottom: "1rem", left: "1rem",
@@ -370,7 +375,35 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           pointerEvents: "none",
         }} />
       )}
-      {pisteError && !loading && (
+      {/* Piste fetch in-progress badge (separate from map tile loading) */}
+      {pisteLoading && !loading && (
+        <div style={{
+          position: "absolute", bottom: "1rem", left: "1rem",
+          padding: "0.3rem 0.6rem",
+          background: "rgba(255,255,255,0.92)",
+          border: "2px solid currentColor",
+          fontSize: "0.7rem",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.4rem",
+          pointerEvents: "none",
+        }}>
+          <span style={{
+            display: "inline-block",
+            width: 10, height: 10,
+            border: "2px solid rgba(0,0,0,0.12)",
+            borderTopColor: "var(--bx-primary, #2b44ff)",
+            borderRadius: "50%",
+            animation: "map-spin 0.75s linear infinite",
+            flexShrink: 0,
+          }} />
+          Loading trails…
+        </div>
+      )}
+      {pisteError && !pisteLoading && (
         <div style={{
           position: "absolute", bottom: "1rem", left: "1rem",
           padding: "0.25rem 0.5rem",
