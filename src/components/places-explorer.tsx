@@ -364,6 +364,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   const [geoLoading,    setGeoLoading]    = useState(false);
   const [copied,        setCopied]        = useState<"coords"|"url"|null>(null);
   const [showFavsOnly,  setShowFavsOnly]  = useState(false);
+  const [filtersOpen,   setFiltersOpen]   = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   const countries = useMemo(
@@ -821,179 +822,193 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   }
 
   // ── DESKTOP LAYOUT ────────────────────────────────────────────────────────
+  // Map is left (full height). All filters + list are in a scrollable right sidebar.
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
 
-      {/* Header + filters */}
-      <div style={{ padding: "1.5rem 1.5rem 0" }}>
-        <div style={{ borderBottom: "3px solid currentColor", paddingBottom: "1.25rem", marginBottom: "1rem" }}>
-          <p className="bx-text-xs bx-uppercase bx-tracking-wide" style={{ opacity: 0.5 }}>Module 03</p>
-          <h1 className="bx-display-2 bx-mb-0">Places</h1>
-          <p className="bx-text-sm" style={{ opacity: 0.5 }}>
-            {clusterIds ? `${clusterIds.length} in area` : `${displayPlaces.length} visible · ${places.length} total`}
-          </p>
-        </div>
+      {/* ── LEFT: Map — always full height ── */}
+      <div style={{ flex: "0 0 65%", position: "relative", borderRight: "3px solid currentColor", height: "100%" }}>
+        <PlacesMap
+          places={places}
+          highlightedIds={highlightedIds}
+          selected={selected}
+          onSelect={handleMapSelect}
+          onClusterSelect={handleClusterSelect}
+          onBoundsChange={setMapVisibleIds}
+        />
+      </div>
 
-        {/* Filter presets */}
-        <div style={{ marginBottom: "0.75rem" }}>
-          <p className="bx-text-xs bx-uppercase" style={{ opacity: 0.4, marginBottom: "0.4rem", letterSpacing: "0.08em" }}>Quick picks</p>
-          <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-            {FILTER_PRESETS.map(p => {
-              const active = level === p.level && terrain === p.terrain && size === p.size && vert === p.vert;
-              return (
-                <button
-                  key={p.label}
-                  onClick={() => applyPreset(p)}
-                  style={{ border: "2px solid currentColor", background: active ? "currentColor" : "transparent", color: active ? "var(--bx-paper,#fff)" : "inherit", padding: "0.25rem 0.75rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", minHeight: 44 }}
-                >
-                  {p.label}
-                </button>
-              );
-            })}
-            <button
-              onClick={requestGeo}
-              style={{ border: "2px solid currentColor", background: sortBy === "distance" ? "currentColor" : "transparent", color: sortBy === "distance" ? "var(--bx-paper,#fff)" : "inherit", padding: "0.25rem 0.75rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", minHeight: 44 }}
-            >
-              {geoLoading ? "Locating…" : "Near me"}
-            </button>
-            <button
-              onClick={() => setShowFavsOnly(v => !v)}
-              style={{ border: "2px solid currentColor", background: showFavsOnly ? "currentColor" : "transparent", color: showFavsOnly ? "var(--bx-paper,#fff)" : "inherit", padding: "0.25rem 0.75rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", minHeight: 44 }}
-            >
-              ★ Saved ({favorites.size})
-            </button>
-          </div>
-        </div>
+      {/* ── RIGHT: Scrollable sidebar ── */}
+      <div ref={listRef} style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", minWidth: 0 }}>
 
-        {/* Level */}
-        <div style={{ marginBottom: "0.5rem" }}>
-          <p className="bx-text-xs bx-uppercase" style={{ opacity: 0.4, marginBottom: "0.4rem", letterSpacing: "0.08em" }}>Level</p>
-          <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-            {LEVEL_OPTIONS.map(o => <Pill key={String(o.value)} label={o.label} hint={o.hint} active={level === o.value} onClick={() => reset({ level: o.value })} />)}
-          </div>
-        </div>
-
-        {/* Terrain */}
-        <div style={{ marginBottom: "0.5rem" }}>
-          <p className="bx-text-xs bx-uppercase" style={{ opacity: 0.4, marginBottom: "0.4rem", letterSpacing: "0.08em" }}>Terrain</p>
-          <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-            {TERRAIN_OPTIONS.map(o => <Pill key={String(o.value)} label={o.label} hint={o.hint} active={terrain === o.value} onClick={() => reset({ terrain: o.value })} />)}
-          </div>
-        </div>
-
-        {/* Vertical drop */}
-        <div style={{ marginBottom: "0.5rem" }}>
-          <p className="bx-text-xs bx-uppercase" style={{ opacity: 0.4, marginBottom: "0.4rem", letterSpacing: "0.08em" }}>Vertical drop</p>
-          <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-            {VERT_OPTIONS.map(o => <Pill key={String(o.value)} label={o.label} hint={o.hint} active={vert === o.value} onClick={() => reset({ vert: o.value })} />)}
-          </div>
-        </div>
-
-        {/* Month filter */}
-        <div style={{ marginBottom: "0.5rem" }}>
-          <p className="bx-text-xs bx-uppercase" style={{ opacity: 0.4, marginBottom: "0.4rem", letterSpacing: "0.08em" }}>Best in month</p>
-          <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-            {[{ value: null as string | null, label: "Any" }, ...MONTH_ABBR.map(m => ({ value: m, label: m }))].map(o => {
-              const isCurrent = o.value === MONTH_ABBR[new Date().getMonth()];
-              return (
-                <button
-                  key={String(o.value)}
-                  onClick={() => reset({ month: o.value })}
-                  style={{ border: "2px solid currentColor", background: month === o.value ? "var(--bx-primary,#2b44ff)" : "transparent", color: month === o.value ? "#fff" : "inherit", padding: "0.2rem 0.5rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: isCurrent ? 900 : 700, textTransform: "uppercase", letterSpacing: "0.04em", outline: isCurrent && month !== o.value ? "2px solid var(--bx-primary,#2b44ff)" : "none", outlineOffset: "1px", minHeight: 36 }}
-                >
-                  {o.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Country · Size · Sort */}
-        <div style={{ marginBottom: "0.5rem", display: "flex", gap: "0.5rem", alignItems: "flex-end", flexWrap: "wrap" }}>
-          <div>
-            <p className="bx-text-xs bx-uppercase" style={{ opacity: 0.4, marginBottom: "0.4rem", letterSpacing: "0.08em" }}>Country</p>
-            <div style={{ position: "relative", display: "inline-block" }}>
-              <select value={country ?? ""} onChange={e => reset({ country: e.target.value || null })} style={selectStyle}>
-                <option value="">All countries</option>
-                {countries.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <span style={{ position: "absolute", right: "0.4rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.6rem", opacity: 0.6 }}>▼</span>
+        {/* Sticky header bar */}
+        <div style={{ position: "sticky", top: 0, zIndex: 10, background: "var(--bx-paper, #fff)", borderBottom: "3px solid currentColor", padding: "0.75rem 1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+            <div>
+              <p style={{ fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.4 }}>Module 03 · Places</p>
+              <p style={{ fontWeight: 900, fontSize: "1.1rem", lineHeight: 1.1 }}>
+                {clusterIds ? `${clusterIds.length} in area` : `${displayPlaces.length}`}
+                <span style={{ fontWeight: 400, fontSize: "0.65rem", opacity: 0.4, marginLeft: "0.35rem" }}>
+                  {clusterIds ? "" : `of ${places.length}`}
+                </span>
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "0.3rem", alignItems: "center" }}>
+              {/* Sort */}
+              <div style={{ position: "relative" }}>
+                <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...selectStyle, fontSize: "0.65rem", padding: "0.25rem 1.4rem 0.25rem 0.4rem" }}>
+                  {sortOptionsAll.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                <span style={{ position: "absolute", right: "0.35rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.55rem", opacity: 0.5 }}>▼</span>
+              </div>
+              {/* Favs toggle */}
+              <button
+                onClick={() => setShowFavsOnly(v => !v)}
+                style={{ border: "2px solid currentColor", background: showFavsOnly ? "currentColor" : "transparent", color: showFavsOnly ? "var(--bx-paper,#fff)" : "inherit", padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}
+              >
+                ★{favorites.size > 0 ? ` ${favorites.size}` : ""}
+              </button>
+              {/* Filters toggle */}
+              <button
+                onClick={() => setFiltersOpen(v => !v)}
+                style={{ border: "2px solid currentColor", background: filtersOpen ? "currentColor" : activeFilterCount > 0 ? "var(--bx-primary,#2b44ff)" : "transparent", color: filtersOpen || activeFilterCount > 0 ? "var(--bx-paper,#fff)" : "inherit", padding: "0.25rem 0.6rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}
+              >
+                Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""} {filtersOpen ? "▲" : "▼"}
+              </button>
             </div>
           </div>
-          <div>
-            <p className="bx-text-xs bx-uppercase" style={{ opacity: 0.4, marginBottom: "0.4rem", letterSpacing: "0.08em" }}>Resort size</p>
-            <div style={{ display: "flex", gap: "0.35rem" }}>
-              {SIZE_OPTIONS.map(o => <Pill key={String(o.value)} label={o.label} hint={o.hint} active={size === o.value} onClick={() => reset({ size: o.value })} />)}
-            </div>
-          </div>
-          <div style={{ marginLeft: "auto" }}>
-            <p className="bx-text-xs bx-uppercase" style={{ opacity: 0.4, marginBottom: "0.4rem", letterSpacing: "0.08em" }}>Sort</p>
-            <div style={{ position: "relative", display: "inline-block" }}>
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={selectStyle}>
-                {sortOptionsAll.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              <span style={{ position: "absolute", right: "0.4rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.6rem", opacity: 0.6 }}>▼</span>
-            </div>
-          </div>
-        </div>
 
-        {/* Search */}
-        <div style={{ marginBottom: chips.length ? "0.5rem" : 0 }}>
+          {/* Search always visible */}
           <input
             type="search"
             placeholder={`Search ${places.length} destinations, highlights…`}
             value={query}
             onChange={e => reset({ query: e.target.value })}
-            style={{ width: "100%", border: "2px solid currentColor", background: "transparent", color: "inherit", padding: "0.4rem 0.75rem", fontSize: "0.8rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+            style={{ width: "100%", border: "2px solid currentColor", background: "transparent", color: "inherit", padding: "0.35rem 0.6rem", fontSize: "0.8rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
           />
+
+          {/* Active chips — always visible when filters are active */}
+          {chips.length > 0 && (
+            <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap", alignItems: "center", marginTop: "0.4rem" }}>
+              {chips.map(c => <FilterChip key={c.key} label={c.label} onRemove={c.clear} />)}
+              <button onClick={clearAll} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.4, padding: "0.2rem 0.25rem" }}>Clear all</button>
+            </div>
+          )}
         </div>
 
-        {/* Active filter chips */}
-        {chips.length > 0 && (
-          <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", alignItems: "center", paddingBottom: "0.75rem", borderBottom: "2px solid currentColor" }}>
-            {chips.map(c => <FilterChip key={c.key} label={c.label} onRemove={c.clear} />)}
-            <button onClick={clearAll} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.4, padding: "0.2rem 0.25rem", minHeight: 44 }}>Clear all</button>
+        {/* ── Collapsible filter panel ── */}
+        {filtersOpen && (
+          <div style={{ borderBottom: "3px solid currentColor", padding: "0.75rem 1rem" }}>
+
+            {/* Presets + utility */}
+            <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+              {FILTER_PRESETS.map(p => {
+                const active = level === p.level && terrain === p.terrain && size === p.size && vert === p.vert;
+                return (
+                  <button key={p.label} onClick={() => applyPreset(p)} style={{ border: "2px solid currentColor", background: active ? "currentColor" : "transparent", color: active ? "var(--bx-paper,#fff)" : "inherit", padding: "0.2rem 0.6rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    {p.label}
+                  </button>
+                );
+              })}
+              <button onClick={requestGeo} style={{ border: "2px solid currentColor", background: sortBy === "distance" ? "currentColor" : "transparent", color: sortBy === "distance" ? "var(--bx-paper,#fff)" : "inherit", padding: "0.2rem 0.6rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                {geoLoading ? "…" : "Near me"}
+              </button>
+            </div>
+
+            {/* Level */}
+            <div style={{ marginBottom: "0.5rem" }}>
+              <p style={{ fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.4, marginBottom: "0.3rem" }}>Level</p>
+              <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+                {LEVEL_OPTIONS.map(o => <Pill key={String(o.value)} label={o.label} hint={o.hint} active={level === o.value} onClick={() => reset({ level: o.value })} />)}
+              </div>
+            </div>
+
+            {/* Terrain */}
+            <div style={{ marginBottom: "0.5rem" }}>
+              <p style={{ fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.4, marginBottom: "0.3rem" }}>Terrain</p>
+              <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+                {TERRAIN_OPTIONS.map(o => <Pill key={String(o.value)} label={o.label} hint={o.hint} active={terrain === o.value} onClick={() => reset({ terrain: o.value })} />)}
+              </div>
+            </div>
+
+            {/* Vert + Size inline */}
+            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+              <div>
+                <p style={{ fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.4, marginBottom: "0.3rem" }}>Vertical drop</p>
+                <div style={{ display: "flex", gap: "0.25rem" }}>
+                  {VERT_OPTIONS.map(o => <Pill key={String(o.value)} label={o.label} hint={o.hint} active={vert === o.value} onClick={() => reset({ vert: o.value })} />)}
+                </div>
+              </div>
+            </div>
+
+            {/* Month */}
+            <div style={{ marginBottom: "0.5rem" }}>
+              <p style={{ fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.4, marginBottom: "0.3rem" }}>Best in month</p>
+              <div style={{ display: "flex", gap: "0.2rem", flexWrap: "wrap" }}>
+                {[{ value: null as string | null, label: "Any" }, ...MONTH_ABBR.map(m => ({ value: m, label: m }))].map(o => {
+                  const isCurrent = o.value === MONTH_ABBR[new Date().getMonth()];
+                  return (
+                    <button
+                      key={String(o.value)}
+                      onClick={() => reset({ month: o.value })}
+                      style={{ border: "2px solid currentColor", background: month === o.value ? "var(--bx-primary,#2b44ff)" : "transparent", color: month === o.value ? "#fff" : "inherit", padding: "0.15rem 0.4rem", cursor: "pointer", fontSize: "0.6rem", fontWeight: isCurrent ? 900 : 700, textTransform: "uppercase", letterSpacing: "0.04em", outline: isCurrent && month !== o.value ? "2px solid var(--bx-primary,#2b44ff)" : "none", outlineOffset: "1px" }}
+                    >
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Country + Size + Sort row */}
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", flexWrap: "wrap" }}>
+              <div>
+                <p style={{ fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.4, marginBottom: "0.3rem" }}>Country</p>
+                <div style={{ position: "relative", display: "inline-block" }}>
+                  <select value={country ?? ""} onChange={e => reset({ country: e.target.value || null })} style={selectStyle}>
+                    <option value="">All countries</option>
+                    {countries.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <span style={{ position: "absolute", right: "0.4rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.6rem", opacity: 0.6 }}>▼</span>
+                </div>
+              </div>
+              <div>
+                <p style={{ fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.4, marginBottom: "0.3rem" }}>Resort size</p>
+                <div style={{ display: "flex", gap: "0.25rem" }}>
+                  {SIZE_OPTIONS.map(o => <Pill key={String(o.value)} label={o.label} hint={o.hint} active={size === o.value} onClick={() => reset({ size: o.value })} />)}
+                </div>
+              </div>
+            </div>
           </div>
         )}
-        {chips.length === 0 && <div style={{ borderBottom: "2px solid currentColor" }} />}
 
         {/* Recent places strip */}
         {recentPlaces.length > 0 && !selected && !clusterIds && activeFilterCount === 0 && (
-          <div style={{ padding: "0.5rem 0", borderBottom: "2px solid currentColor", display: "flex", gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.35, flexShrink: 0 }}>Recent:</span>
+          <div style={{ padding: "0.4rem 1rem", borderBottom: "2px solid currentColor", display: "flex", gap: "0.3rem", flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: "0.55rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.35, flexShrink: 0 }}>Recent:</span>
             {recentPlaces.slice(0, 5).map(p => (
-              <button
-                key={p.id}
-                onClick={() => handleSelect(p)}
-                style={{ border: "1px solid currentColor", background: "none", cursor: "pointer", fontSize: "0.65rem", padding: "0.15rem 0.5rem", opacity: 0.6 }}
-              >
+              <button key={p.id} onClick={() => handleSelect(p)} style={{ border: "1px solid currentColor", background: "none", cursor: "pointer", fontSize: "0.6rem", padding: "0.1rem 0.4rem", opacity: 0.55 }}>
                 {p.name}
               </button>
             ))}
           </div>
         )}
-      </div>
 
-      {/* Map + list */}
-      <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
-        <div style={{ flex: "0 0 62%", position: "relative", borderRight: "3px solid currentColor", height: "100%" }}>
-          <PlacesMap places={places} highlightedIds={highlightedIds} selected={selected} onSelect={handleMapSelect} onClusterSelect={handleClusterSelect} onBoundsChange={setMapVisibleIds} />
-        </div>
+        {/* Back button */}
+        {(clusterIds || selected) && (
+          <button onClick={clusterIds ? clearCluster : () => setSelected(null)} style={{ border: "none", borderBottom: "2px solid currentColor", background: "transparent", padding: "0.6rem 1rem", cursor: "pointer", textAlign: "left", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.5 }}>
+            ← {clusterIds ? `All ${filtered.length} places` : "All places"}
+          </button>
+        )}
 
-        <div ref={listRef} style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-          {(clusterIds || selected) && (
-            <button onClick={clusterIds ? clearCluster : () => setSelected(null)} style={{ border: "none", borderBottom: "2px solid currentColor", background: "transparent", padding: "0.6rem 1rem", cursor: "pointer", textAlign: "left", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.5 }}>
-              ← {clusterIds ? `All ${filtered.length} places` : "All places"}
-            </button>
-          )}
-          {displayPlaces.length === 0 ? renderEmpty() : visiblePlaces.map(place => renderItem(place, "1rem 1.25rem"))}
-          {visible < displayPlaces.length && (
-            <button onClick={() => setVisible(v => v + PAGE)} style={{ border: "none", borderTop: "2px solid currentColor", background: "transparent", padding: "0.75rem 1.25rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", width: "100%", textAlign: "center" }}>
-              Show {Math.min(PAGE, displayPlaces.length - visible)} more
-              <span style={{ opacity: 0.4, marginLeft: "0.5rem" }}>({displayPlaces.length - visible} remaining)</span>
-            </button>
-          )}
-        </div>
+        {/* List */}
+        {displayPlaces.length === 0 ? renderEmpty() : visiblePlaces.map(place => renderItem(place, "0.875rem 1rem"))}
+        {visible < displayPlaces.length && (
+          <button onClick={() => setVisible(v => v + PAGE)} style={{ border: "none", borderTop: "2px solid currentColor", background: "transparent", padding: "0.75rem 1rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", width: "100%", textAlign: "center" }}>
+            Show {Math.min(PAGE, displayPlaces.length - visible)} more
+            <span style={{ opacity: 0.4, marginLeft: "0.5rem" }}>({displayPlaces.length - visible} remaining)</span>
+          </button>
+        )}
       </div>
     </div>
   );
