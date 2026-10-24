@@ -21,6 +21,11 @@ export type DbPlace = {
   longitude: number | null;
   skimap_url: string | null;
   tags: string[];
+  lifts_count: number;
+  vertical_drop: number;
+  runs_nordic: number;
+  has_night_skiing: boolean;
+  has_snow_park: boolean;
 };
 
 // Tags → equipment IDs

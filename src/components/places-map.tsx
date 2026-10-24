@@ -46,10 +46,22 @@ type Props = {
   onBoundsChange: (ids: string[]) => void;
 };
 
+const MAP_STYLES = {
+  street:    "https://tiles.openfreemap.org/styles/liberty",
+  satellite: "https://tiles.openfreemap.org/styles/satellite" as string | null,
+  dark:      "https://tiles.openfreemap.org/styles/dark",
+};
+
 export default function PlacesMap({ places, highlightedIds, selected, onSelect, onClusterSelect, onBoundsChange }: Props) {
   const [loading, setLoading]            = useState(true);
   const [pisteLoading, setPisteLoading]  = useState(false);
   const [pisteError, setPisteError]      = useState(false);
+  const [pisteLoaded, setPisteLoaded]    = useState(false);
+  const [layerVis, setLayerVis]          = useState({ pistes: true, lifts: true });
+  const [hoverInfo, setHoverInfo]        = useState<{ name: string; stat: string; x: number; y: number } | null>(null);
+  const [lineHover, setLineHover]        = useState<{ name: string; kind: string; x: number; y: number } | null>(null);
+  const [mapStyle, setMapStyle]          = useState<"street"|"dark">("street");
+  const [fullscreen, setFullscreen]      = useState(false);
   const containerRef               = useRef<HTMLDivElement>(null);
   const mapRef                     = useRef<any>(null);
   const mapReadyRef                = useRef(false);
@@ -60,6 +72,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
   const placesRef                  = useRef(places);
   const highlightedRef             = useRef(highlightedIds);
   const selectedRef                = useRef(selected);
+  const layerVisRef                = useRef({ pistes: true, lifts: true });
 
   // Keep refs in sync with latest props
   useEffect(() => { onSelectRef.current        = onSelect;        }, [onSelect]);
@@ -81,6 +94,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
 
     if (!place) {
       setPisteLoading(false);
+      setPisteLoaded(false);
       const b = safeBounds(placesRef.current.filter(p => highlightedRef.current.includes(p.id)));
       if (b) map.fitBounds(
         [[b.minLng - 4, b.minLat - 2], [b.maxLng + 4, b.maxLat + 2]],
@@ -105,15 +119,37 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       map.addSource("ski", { type: "geojson", data: geojson });
       map.addLayer({ id: "lifts", type: "line", source: "ski",
         filter: ["==", ["get", "kind"], "lift"],
+        layout: { visibility: layerVisRef.current.lifts ? "visible" : "none" },
         paint: { "line-color": "#9ca3af", "line-width": 1.5, "line-dasharray": [3, 2] } });
       map.addLayer({ id: "pistes", type: "line", source: "ski",
         filter: ["==", ["get", "kind"], "piste"],
+        layout: { visibility: layerVisRef.current.pistes ? "visible" : "none" },
         paint: {
           "line-color": ["match", ["get", "difficulty"],
             "novice","#166534","easy","#166534","intermediate","#1e40af",
             "advanced","#991b1b","expert","#18181b","freeride","#18181b","#6b7280"],
           "line-width": 2, "line-opacity": 0.9,
         } });
+      setPisteLoaded(true);
+
+      // Piste hover tooltips
+      for (const layer of ["pistes", "lifts"] as const) {
+        map.on("mouseenter", layer, (e: any) => {
+          map.getCanvas().style.cursor = "crosshair";
+          const feat = e.features?.[0];
+          if (!feat) return;
+          const name = feat.properties?.name || feat.properties?.ref || "";
+          const kind = feat.properties?.kind || layer;
+          if (name) setLineHover({ name, kind, x: e.originalEvent.clientX, y: e.originalEvent.clientY });
+        });
+        map.on("mousemove", layer, (e: any) => {
+          setLineHover(prev => prev ? { ...prev, x: e.originalEvent.clientX, y: e.originalEvent.clientY } : null);
+        });
+        map.on("mouseleave", layer, () => {
+          map.getCanvas().style.cursor = "";
+          setLineHover(null);
+        });
+      }
 
       // Fit camera to the full extent of the loaded pistes, but never zoom out
       const coords = geojson.features
@@ -182,6 +218,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       });
       mapRef.current = map;
       map.addControl(new ml.AttributionControl({ compact: true }), "bottom-left");
+      map.addControl(new ml.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-right");
 
       // Use style.load (fires before all tiles) so we can interact sooner
       map.once("style.load", () => {
@@ -279,8 +316,24 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           const place = placesRef.current.find(p => p.id === feat.properties.id);
           if (place) onSelectRef.current(place);
         });
-        map.on("mouseenter", "place-circles", () => { map.getCanvas().style.cursor = "pointer"; });
-        map.on("mouseleave", "place-circles", () => { map.getCanvas().style.cursor = ""; });
+        map.on("mouseenter", "place-circles", (e: any) => {
+          map.getCanvas().style.cursor = "pointer";
+          const feat = e.features?.[0];
+          if (!feat) return;
+          const place = placesRef.current.find(p => p.id === feat.properties.id);
+          if (!place) return;
+          const km = place.total_km ?? 0;
+          const vd = (place as any).vertical_drop ?? 0;
+          const stat = vd > 0 ? `${vd}m vert` : km > 0 ? `${km} km` : "";
+          setHoverInfo({ name: place.name, stat, x: e.originalEvent.clientX, y: e.originalEvent.clientY });
+        });
+        map.on("mousemove", "place-circles", (e: any) => {
+          setHoverInfo(prev => prev ? { ...prev, x: e.originalEvent.clientX, y: e.originalEvent.clientY } : null);
+        });
+        map.on("mouseleave", "place-circles", () => {
+          map.getCanvas().style.cursor = "";
+          setHoverInfo(null);
+        });
 
         // Loading spinner: only for tile/vector sources, not the piste GeoJSON overlay
         map.on("sourcedataloading", (e: any) => {
@@ -346,8 +399,45 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
     applySelection(map, selected);
   }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Map style change ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current) return;
+    const styleUrl = mapStyle === "dark"
+      ? "https://tiles.openfreemap.org/styles/dark"
+      : "https://tiles.openfreemap.org/styles/liberty";
+    map.setStyle(styleUrl);
+    // Re-add sources/layers after style reload
+    map.once("style.load", () => {
+      if (!map.getSource("places")) {
+        map.addSource("places", {
+          type: "geojson",
+          data: buildGeoJSON(placesRef.current, highlightedRef.current, selectedRef.current?.id ?? null),
+          cluster: true, clusterMaxZoom: 8, clusterRadius: 55,
+          clusterProperties: { hlCount: ["+", ["case", ["boolean", ["get", "highlighted"], false], 1, 0]] },
+        });
+        map.addLayer({ id: "clusters", type: "circle", source: "places", filter: ["has", "point_count"], paint: { "circle-radius": ["step", ["get", "point_count"], 14, 10, 20, 50, 26], "circle-color": ["case", [">", ["get", "hlCount"], 0], "#2b44ff", "#9ca3af"], "circle-opacity": ["case", [">", ["get", "hlCount"], 0], 0.85, 0.35], "circle-stroke-color": "#000", "circle-stroke-width": 2 } });
+        map.addLayer({ id: "cluster-count", type: "symbol", source: "places", filter: ["has", "point_count"], layout: { "text-field": "{point_count_abbreviated}", "text-size": 10 }, paint: { "text-color": ["case", [">", ["get", "hlCount"], 0], "#fff", "#000"] } });
+        map.addLayer({ id: "place-circles", type: "circle", source: "places", filter: ["!", ["has", "point_count"]], paint: { "circle-radius": ["case", ["boolean", ["get", "selected"], false], 13, 8], "circle-color": ["case", ["boolean", ["get", "selected"], false], "#2b44ff", ["boolean", ["get", "highlighted"], false], "#2b44ff", "#d1d5db"], "circle-stroke-color": ["case", ["boolean", ["get", "selected"], false], "#fff", "#000"], "circle-stroke-width": ["case", ["boolean", ["get", "selected"], false], 3, 2], "circle-opacity": ["case", ["boolean", ["get", "selected"], false], 1, ["boolean", ["get", "highlighted"], false], 1, 0.2] } });
+        map.addLayer({ id: "place-labels", type: "symbol", source: "places", filter: ["all", ["!", ["has", "point_count"]], ["boolean", ["get", "highlighted"], false]], layout: { "text-field": ["get", "name"], "text-offset": [0, 1.5], "text-anchor": "top", "text-size": 11, "text-optional": true }, paint: { "text-color": mapStyle === "dark" ? "#fff" : "#111", "text-halo-color": mapStyle === "dark" ? "#000" : "#fff", "text-halo-width": 1.5 } });
+      }
+      // Re-add piste overlay if selected
+      if (selectedRef.current) applySelection(map, selectedRef.current);
+    });
+  }, [mapStyle]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleLayer(layer: "pistes" | "lifts") {
+    const next = { ...layerVisRef.current, [layer]: !layerVisRef.current[layer] };
+    layerVisRef.current = next;
+    setLayerVis(next);
+    const map = mapRef.current;
+    if (map && map.getLayer(layer)) {
+      map.setLayoutProperty(layer, "visibility", next[layer] ? "visible" : "none");
+    }
+  }
+
   return (
-    <div style={{ width: "100%", height: "100%", position: "relative" }}>
+    <div style={{ width: "100%", height: "100%", position: "relative", ...(fullscreen ? { position: "fixed", inset: 0, zIndex: 9999 } : {}) }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
       {/* Map tile loading spinner */}
       {loading && (
@@ -402,6 +492,126 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           zIndex: 10,
         }}>
           Trail data unavailable — try again later
+        </div>
+      )}
+      {/* Layer toggles — only visible when piste data is loaded */}
+      {pisteLoaded && (
+        <div style={{
+          position: "absolute", bottom: "2.5rem", left: "0.75rem",
+          display: "flex", gap: "0.25rem", zIndex: 5,
+        }}>
+          {(["pistes", "lifts"] as const).map(layer => (
+            <button
+              key={layer}
+              onClick={() => toggleLayer(layer)}
+              style={{
+                background: layerVis[layer] ? "var(--bx-primary, #2b44ff)" : "rgba(255,255,255,0.92)",
+                color: layerVis[layer] ? "#fff" : "#111",
+                border: "2px solid #000",
+                padding: "0.3rem 0.65rem",
+                fontSize: "0.6rem",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                cursor: "pointer",
+              }}
+            >
+              {layer === "pistes" ? "Pistes" : "Lifts"}
+            </button>
+          ))}
+        </div>
+      )}
+      {/* Difficulty legend — shown when piste data is loaded */}
+      {pisteLoaded && layerVis.pistes && (
+        <div style={{
+          position: "absolute", bottom: "2.5rem", right: "0.75rem",
+          background: "rgba(255,255,255,0.93)",
+          border: "2px solid #000",
+          padding: "0.45rem 0.6rem",
+          fontSize: "0.58rem",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.04em",
+          lineHeight: 1.9,
+          zIndex: 5,
+          pointerEvents: "none",
+        }}>
+          {[
+            { color: "#166534", label: "Green" },
+            { color: "#1e40af", label: "Blue"  },
+            { color: "#991b1b", label: "Red"   },
+            { color: "#18181b", label: "Black" },
+          ].map(({ color, label }) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <span style={{ display: "inline-block", width: 18, height: 3, background: color, flexShrink: 0 }} />
+              {label}
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Map style + fullscreen toggles */}
+      <div style={{ position: "absolute", top: "0.75rem", left: "0.75rem", display: "flex", gap: "0.25rem", zIndex: 5 }}>
+        {(["street", "dark"] as const).map(s => (
+          <button
+            key={s}
+            onClick={() => setMapStyle(s)}
+            style={{ background: mapStyle === s ? "#000" : "rgba(255,255,255,0.92)", color: mapStyle === s ? "#fff" : "#111", border: "2px solid #000", padding: "0.3rem 0.5rem", fontSize: "0.55rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer" }}
+          >
+            {s === "street" ? "Map" : "Dark"}
+          </button>
+        ))}
+        <button
+          onClick={() => setFullscreen(v => !v)}
+          style={{ background: "rgba(255,255,255,0.92)", color: "#111", border: "2px solid #000", padding: "0.3rem 0.5rem", fontSize: "0.55rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer" }}
+        >
+          {fullscreen ? "Exit" : "⛶"}
+        </button>
+      </div>
+
+      {/* Zoom to filtered results button */}
+      {!selected && (
+        <button
+          onClick={() => {
+            const map = mapRef.current;
+            if (!map) return;
+            const b = safeBounds(placesRef.current.filter(p => highlightedRef.current.includes(p.id)));
+            if (b) map.fitBounds([[b.minLng - 2, b.minLat - 1], [b.maxLng + 2, b.maxLat + 1]], { padding: 40, duration: 600 });
+          }}
+          style={{
+            position: "absolute", top: "0.75rem", right: "0.75rem",
+            background: "rgba(255,255,255,0.92)",
+            border: "2px solid #000",
+            padding: "0.3rem 0.65rem",
+            fontSize: "0.6rem", fontWeight: 900,
+            textTransform: "uppercase", letterSpacing: "0.06em",
+            cursor: "pointer", zIndex: 5,
+          }}
+        >
+          Zoom to results
+        </button>
+      )}
+      {/* Piste/lift line hover tooltip */}
+      {lineHover && (
+        <div style={{ position: "fixed", left: lineHover.x + 12, top: lineHover.y - 36, background: lineHover.kind === "lift" ? "#1f2937" : "#000", color: "#fff", padding: "0.25rem 0.55rem", fontSize: "0.65rem", fontWeight: 700, pointerEvents: "none", zIndex: 20, whiteSpace: "nowrap" }}>
+          {lineHover.name} <span style={{ opacity: 0.6, fontWeight: 400 }}>{lineHover.kind}</span>
+        </div>
+      )}
+      {/* Marker hover tooltip */}
+      {hoverInfo && (
+        <div style={{
+          position: "fixed",
+          left: hoverInfo.x + 12,
+          top: hoverInfo.y - 36,
+          background: "#000",
+          color: "#fff",
+          padding: "0.25rem 0.55rem",
+          fontSize: "0.65rem",
+          fontWeight: 700,
+          pointerEvents: "none",
+          zIndex: 20,
+          whiteSpace: "nowrap",
+        }}>
+          {hoverInfo.name}{hoverInfo.stat ? ` · ${hoverInfo.stat}` : ""}
         </div>
       )}
       <style>{`@keyframes map-spin { to { transform: rotate(360deg); } }`}</style>
