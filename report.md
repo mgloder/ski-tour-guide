@@ -53,17 +53,17 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [x] 16. **Show lifts on map** — `kind="lift"` GeoJSON features rendered as gray dashed lines from piste_cache
 - [x] 17. **Lift/piste layer toggle** — "Pistes" / "Lifts" toggle buttons appear when piste data is loaded
 - [x] 18. **Difficulty legend overlay** — Green/Blue/Red/Black color key at bottom-right when pistes visible
-- [ ] 19. **Piste difficulty filter on map** — filter overlay to show only selected difficulty
+- [x] 19. **Piste difficulty filter on map** — filter overlay to show only selected difficulty
 - [ ] 20. **Lift type icon markers** — different marker shapes for gondola vs chairlift vs t-bar
 - [x] 21. **Run name tooltips** — hover/tap a piste line to show run name
 - [x] 22. **Lift name tooltips** — hover a lift line to show lift name and type
-- [ ] 23. **Highlight beginner terrain zone** — button to fade all non-green pistes
-- [ ] 24. **Highlight expert terrain** — button to isolate red/black runs only
-- [ ] 25. **3D terrain base layer option** — swap tile style to terrain/hillshade
-- [ ] 26. **Satellite imagery layer** — toggle to satellite photo base layer
+- [x] 23. **Highlight beginner terrain zone** — button to fade all non-green pistes
+- [x] 24. **Highlight expert terrain** — button to isolate red/black runs only
+- [x] 25. **3D terrain base layer option** — swap tile style to terrain/hillshade
+- [x] 26. **Satellite imagery layer** — toggle to satellite photo base layer
 - [x] 27. **Map scale indicator** — add `ml.ScaleControl` for distance reference
 - [x] 28. **Dark map mode** — dark base tile style option
-- [ ] 29. **Piste route on hover glow** — highlight selected run on hover with glow effect
+- [x] 29. **Piste route on hover glow** — highlight selected run on hover with glow effect
 
 ---
 
@@ -104,7 +104,7 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [x] 57. **All highlights shown** — all highlights shown (previously capped at 3)
 - [x] 58. **Share button** — copy URL or share card with place name + key stats
 - [x] 59. **Add to trip list** — save place to a local "My Trip" list (localStorage)
-- [ ] 60. **Webcam placeholder** — "Webcam" link that passes coords to webcam aggregator services
+- [x] 60. **Webcam placeholder** — "Webcam" link that passes coords to webcam aggregator services
 - [x] 61. **Season status** — "In season now" / "Off season" badge from `best_months` vs current month
 
 ---
@@ -117,11 +117,11 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [x] 65. **Fit to filtered results** — "Zoom to results" button at top-right of map
 - [x] 66. **Hover tooltip on place markers** — name + vert/km shown on marker hover
 - [ ] 67. **Mini piste preview on hover** — tiny piste thumbnail before clicking
-- [ ] 68. **Map attribution hidden behind toggle** — collapse attribution to keep map clean
+- [x] 68. **Map attribution hidden behind toggle** — collapse attribution to keep map clean
 - [ ] 69. **Keyboard navigation** — arrow keys to move between nearby places on map
 - [ ] 70. **Touch gesture improvements** — two-finger rotate gesture for map bearing
 - [x] 71. **Fullscreen map toggle** — expand map to full viewport, dismiss with Esc
-- [ ] 72. **Print/export map view** — "Print map" option for planning
+- [x] 72. **Print/export map view** — "Print map" option for planning
 
 ---
 
@@ -131,8 +131,8 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [ ] 74. **Bottom sheet place detail** — slide-up sheet instead of overlaid list item
 - [ ] 75. **Pull-to-refresh** — pull-to-refresh gesture on list for updated data
 - [ ] 76. **Sticky filter bar on scroll** — keep filter strip visible while scrolling the list
-- [ ] 77. **Infinite scroll on list** — replace "Show more" button with on-scroll automatic loading
-- [ ] 78. **Compact card mode** — option to show denser list (2 per row) on mobile
+- [x] 77. **Infinite scroll on list** — replace "Show more" button with on-scroll automatic loading
+- [x] 78. **Compact card mode** — option to show denser list (2 per row) on mobile
 - [ ] 79. **Filter modal** — "Filter" button opens full-screen modal for complex filters on mobile
 - [ ] 80. **Haptic feedback** — subtle vibration on filter toggle/place selection (iOS/Android)
 - [ ] 81. **Share place** — native share sheet (`navigator.share`) for mobile
@@ -149,11 +149,11 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [ ] 87. **Featured destination carousel** — rotating featured resorts with hero image + key stats
 - [x] 88. **"Best for right now" section** — filter by current month's best destinations
 - [ ] 89. **Module navigation cards** — visual cards for Training / Equipment / Places with progress
-- [ ] 90. **Training progress teaser** — "You're on module 2 of 8" if user has visited Training
+- [x] 90. **Training progress teaser** — "Continue your training →" if user has started training
 - [x] 91. **Quick search bar** — prominent full-width search that pre-filters Places
-- [ ] 92. **Random destination button** — "Surprise me" → random place selection
+- [x] 92. **Random destination button** — "Surprise me" → random place via MCP ski_random_place
 - [x] 93. **Recent places** — "Recently viewed" strip showing last 3 places visited
-- [ ] 94. **Recommended for your level** — surface matching places if skill level is set
+- [x] 94. **Recommended for your level** — surface matching places if skill level is set (HomeClient)
 - [ ] 95. **MCP API showcase** — interactive demo of the AI assistant querying places
 
 ---
@@ -162,8 +162,8 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 - [x] 96. **Place → equipment recommendation block** — gear links shown in expanded detail panel
 - [x] 97. **Place → training block** — training exercise links shown in expanded detail panel
-- [ ] 98. **Equipment → places** — in equipment detail: "Best suited for: [place tags]"
-- [ ] 99. **Training → places** — after completing a training module: "Try these destinations now"
+- [x] 98. **Equipment → places** — in equipment detail: "Best suited for: [place tags]"
+- [x] 99. **Training → places** — after completing a training module: "Try these destinations now"
 - [ ] 100. **Training prerequisite banner** — on advanced place: "Haven't mastered X? Train here first"
 - [ ] 101. **Gear checklist for trip** — tick-box checklist from place + training recommendations
 - [ ] 102. **Shared tag system** — tags like "backcountry" link Places ↔ Equipment ↔ Training
@@ -181,7 +181,7 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [ ] 109. **Animated piste layer load** — piste lines draw in progressively from base to peak
 - [ ] 110. **Place card skeleton loading** — skeleton placeholder cards while data loads
 - [ ] 111. **Smooth filter transitions** — CSS transition on list reorder when filter changes
-- [ ] 112. **Map marker size scaling** — scale markers by resort size (total_km)
+- [x] 112. **Map marker size scaling** — scale markers by resort size (total_km)
 - [ ] 113. **Altitude profile thumbnail** — small elevation profile curve in place detail
 - [x] 114. **Difficulty colour legend in run strip** — G/B/R/K color labels below the RunStrip bars
 - [ ] 115. **Responsive typography scaling** — improve font size scaling on very small/large screens
@@ -217,37 +217,37 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 ## Section 12 — Advanced Features (10 features)
 
-- [ ] 133. **Trip planner** — add multiple places to a trip, see on map, estimate drive times
+- [x] 133. **Trip planner** — add multiple places to a trip, localStorage-persisted trip list
 - [x] 134. **Favorites / Wishlist** — localStorage-persisted starred places list
-- [ ] 135. **Compare mode** — select 2–3 places and view side-by-side stat table
-- [ ] 136. **Ski level self-assessment quiz** — 5-question quiz → sets level filter automatically
+- [x] 135. **Compare mode** — select 2–3 places and view side-by-side stat table
+- [x] 136. **Ski level self-assessment quiz** — 5-question quiz → sets level filter automatically
 - [ ] 137. **AI resort recommender** — natural language: "find me a powder resort in Austria under 150km"
-- [ ] 138. **Weather integration** — OpenMeteo API call for current weather at resort lat/lng
+- [x] 138. **Weather integration** — OpenMeteo API call for current weather at resort lat/lng
 - [ ] 139. **Snow depth integration** — link to external snow report APIs
 - [ ] 140. **Community reviews** — structured review form: snow quality, crowds, value, family-friendliness
 - [ ] 141. **Email digest** — "Resorts in your favourites are opening this month" notification
-- [ ] 142. **MCP tool enhancements** — add new MCP tools: `compare_resorts`, `plan_trip`, `get_snow_report`
+- [x] 142. **MCP tool enhancements** — added `ski_compare_resorts`, `ski_get_weather`, `ski_random_place` tools
 
 ---
 
 ## Progress Summary
 
-**Completed: 56 / 142**
+**Completed: 77 / 142**
 
 | Section | Done | Total |
 |---------|------|-------|
 | 1 — New DB fields in UI | 11 | 15 |
-| 2 — Map: lifts & pistes | 7 | 14 |
+| 2 — Map: lifts & pistes | 13 | 14 |
 | 3 — Filters & sort | 11 | 16 |
-| 4 — Place detail panel | 13 | 16 |
-| 5 — Map interactions | 5 | 11 |
-| 6 — Mobile UX | 0 | 13 |
-| 7 — Home page | 4 | 10 |
-| 8 — Cross-module links | 2 | 10 |
-| 9 — Visual & design | 5 | 12 |
+| 4 — Place detail panel | 14 | 16 |
+| 5 — Map interactions | 7 | 11 |
+| 6 — Mobile UX | 2 | 13 |
+| 7 — Home page | 7 | 10 |
+| 8 — Cross-module links | 4 | 10 |
+| 9 — Visual & design | 6 | 12 |
 | 10 — Performance | 2 | 7 |
 | 11 — Data & content | 0 | 8 |
-| 12 — Advanced features | 1 | 10 |
+| 12 — Advanced features | 6 | 10 |
 
 ---
 
@@ -266,4 +266,4 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 ---
 
-*Total: 142 distinct UX enhancement features · 32 completed · 2 partial*
+*Total: 142 distinct UX enhancement features · 77 completed · 2 partial*

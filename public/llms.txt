@@ -26,6 +26,9 @@
 - **ski_get_exercise** — get full exercise details by `id`
 - **ski_list_equipment** — list equipment items; filter by `category` or `skillLevel`
 - **ski_get_equipment** — get full equipment details by `id`
+- **ski_compare_resorts** — compare up to 5 resorts side-by-side; params `{ ids: string[] }` (max 5 IDs); returns name, country, total_km, vertical_drop, lifts_count, run counts, altitude_peak, has_night_skiing, has_snow_park
+- **ski_get_weather** — get current weather for a resort by `id`; returns temperature, wind speed, snowfall, weather_code, and human-readable description (powered by Open-Meteo)
+- **ski_random_place** — get a random ski resort; optionally filter by `tags` array to get a random matching resort
 
 #### Place fields returned by ski_list_places / ski_get_place
 

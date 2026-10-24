@@ -2,6 +2,53 @@ import { NextRequest, NextResponse } from "next/server";
 import { exercises } from "@/data/exercises";
 import { equipment } from "@/data/equipment";
 import { getPlaces, getPlace } from "@/lib/places";
+import { sql } from "@/lib/db";
+
+// ── Weather helpers (shared with ski_get_weather tool) ────────────────────
+
+const WEATHER_DESCRIPTIONS: Record<string, string> = {
+  "0": "Clear", "1": "Partly cloudy", "2": "Partly cloudy", "3": "Partly cloudy",
+  "45": "Fog", "48": "Fog",
+  "51": "Rain", "53": "Rain", "55": "Rain", "56": "Rain", "57": "Rain",
+  "61": "Rain", "63": "Rain", "65": "Rain", "66": "Rain", "67": "Rain",
+  "71": "Snow", "73": "Snow", "75": "Snow", "77": "Snow",
+  "80": "Showers", "81": "Showers", "82": "Showers",
+  "85": "Snow showers", "86": "Snow showers",
+  "95": "Thunderstorm", "96": "Thunderstorm", "99": "Thunderstorm",
+};
+
+function describeWeatherCode(code: number): string {
+  const exact = WEATHER_DESCRIPTIONS[String(code)];
+  if (exact) return exact;
+  if (code >= 1 && code <= 3) return "Partly cloudy";
+  if (code >= 45 && code <= 48) return "Fog";
+  if (code >= 51 && code <= 67) return "Rain";
+  if (code >= 71 && code <= 77) return "Snow";
+  if (code >= 80 && code <= 82) return "Showers";
+  if (code >= 85 && code <= 86) return "Snow showers";
+  if (code >= 95 && code <= 99) return "Thunderstorm";
+  return "Unknown";
+}
+
+async function fetchWeather(lat: number, lng: number) {
+  const url =
+    `https://api.open-meteo.com/v1/forecast` +
+    `?latitude=${lat}&longitude=${lng}` +
+    `&current=temperature_2m,wind_speed_10m,snowfall,weather_code` +
+    `&wind_speed_unit=kmh`;
+  const res = await fetch(url, { next: { revalidate: 1800 } });
+  if (!res.ok) throw { code: -32603, message: `Open-Meteo returned ${res.status}` };
+  const data = await res.json() as {
+    current: {
+      temperature_2m: number;
+      wind_speed_10m: number;
+      snowfall: number;
+      weather_code: number;
+    };
+  };
+  const { temperature_2m, wind_speed_10m, snowfall, weather_code } = data.current;
+  return { temperature_2m, wind_speed_10m, snowfall, weather_code, description: describeWeatherCode(weather_code) };
+}
 
 // MCP JSON-RPC 2.0 server for ski-tour-guide
 // Protocol: https://spec.modelcontextprotocol.io
@@ -136,6 +183,47 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: "ski_compare_resorts",
+    description: "Compare up to 5 ski resorts side-by-side. Returns key stats for each resort including runs, lifts, vertical drop, and facilities.",
+    inputSchema: {
+      type: "object",
+      required: ["ids"],
+      properties: {
+        ids: {
+          type: "array",
+          items: { type: "string" },
+          description: "Array of resort IDs to compare (max 5)",
+          maxItems: 5,
+        },
+      },
+    },
+  },
+  {
+    name: "ski_get_weather",
+    description: "Get current weather for a ski resort by its ID. Returns temperature, wind speed, snowfall, and a human-readable description.",
+    inputSchema: {
+      type: "object",
+      required: ["id"],
+      properties: {
+        id: { type: "string", description: "Resort id" },
+      },
+    },
+  },
+  {
+    name: "ski_random_place",
+    description: "Get a random ski resort. Optionally filter by tags to get a random resort matching specific criteria.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description: "Optional tags to filter by (e.g. ['powder', 'beginner-friendly']). Returns a random match.",
+        },
+      },
+    },
+  },
 ];
 
 async function handleToolCall(name: string, args: Record<string, unknown>): Promise<unknown> {
@@ -208,6 +296,63 @@ async function handleToolCall(name: string, args: Record<string, unknown>): Prom
       const place = await getPlace(args.id);
       if (!place) throw { code: -32602, message: `Place '${args.id}' not found` };
       return place;
+    }
+    case "ski_compare_resorts": {
+      if (!Array.isArray(args.ids) || args.ids.length === 0) {
+        throw { code: -32602, message: "ids must be a non-empty array" };
+      }
+      const ids = (args.ids as unknown[])
+        .filter((id): id is string => typeof id === "string")
+        .slice(0, 5);
+      const results = await Promise.all(ids.map(id => getPlace(id)));
+      return results.map((p, i) => {
+        if (!p) return { id: ids[i], error: "Not found" };
+        return {
+          id: p.id,
+          name: p.name,
+          country: p.country,
+          total_km: p.total_km,
+          vertical_drop: p.vertical_drop,
+          lifts_count: p.lifts_count,
+          runs_green: p.runs_green,
+          runs_blue: p.runs_blue,
+          runs_red: p.runs_red,
+          runs_black: p.runs_black,
+          altitude_peak: p.altitude_peak,
+          has_night_skiing: p.has_night_skiing,
+          has_snow_park: p.has_snow_park,
+        };
+      });
+    }
+    case "ski_get_weather": {
+      if (typeof args.id !== "string") throw { code: -32602, message: "id must be a string" };
+      const place = await getPlace(args.id);
+      if (!place) throw { code: -32602, message: `Place '${args.id}' not found` };
+      if (place.latitude == null || place.longitude == null) {
+        throw { code: -32602, message: `Place '${args.id}' has no coordinates` };
+      }
+      const weather = await fetchWeather(place.latitude, place.longitude);
+      return { resort: { id: place.id, name: place.name }, weather };
+    }
+    case "ski_random_place": {
+      let rows;
+      if (Array.isArray(args.tags) && args.tags.length > 0) {
+        const tags = (args.tags as unknown[]).filter((t): t is string => typeof t === "string");
+        rows = await sql`
+          SELECT * FROM places
+          WHERE tags && ${tags}::text[]
+          ORDER BY RANDOM()
+          LIMIT 1
+        `;
+      } else {
+        rows = await sql`
+          SELECT * FROM places
+          ORDER BY RANDOM()
+          LIMIT 1
+        `;
+      }
+      if (!rows || rows.length === 0) throw { code: -32602, message: "No places found" };
+      return rows[0];
     }
     default:
       throw { code: -32601, message: `Tool '${name}' not found` };

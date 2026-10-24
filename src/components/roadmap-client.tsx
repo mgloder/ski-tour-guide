@@ -508,6 +508,29 @@ export default function RoadmapClient() {
               </div>
             )}
 
+            {/* Cross-module link to destinations */}
+            <div style={{ marginTop: "3rem", borderTop: "3px solid currentColor", paddingTop: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
+              <p className="bx-text-sm" style={{ opacity: 0.55, margin: 0 }}>
+                Ready to test your skills on the mountain?
+              </p>
+              <a
+                href="/places"
+                style={{
+                  border: "2px solid currentColor",
+                  padding: "0.45rem 1rem",
+                  fontSize: "0.7rem",
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  textDecoration: "none",
+                  color: "inherit",
+                  flexShrink: 0,
+                }}
+              >
+                Browse destinations →
+              </a>
+            </div>
+
           </div>
         )}
 

@@ -12,7 +12,13 @@ function buildGeoJSON(places: DbPlace[], highlightedIds: string[], selectedId: s
       .map(p => ({
         type: "Feature" as const,
         geometry: { type: "Point" as const, coordinates: [p.longitude!, p.latitude!] },
-        properties: { id: p.id, name: p.name, highlighted: hl.has(p.id), selected: p.id === selectedId },
+        properties: {
+          id: p.id,
+          name: p.name,
+          highlighted: hl.has(p.id),
+          selected: p.id === selectedId,
+          km: p.total_km ?? 0,
+        },
       })),
   };
 }
@@ -48,20 +54,34 @@ type Props = {
 
 const MAP_STYLES = {
   street:    "https://tiles.openfreemap.org/styles/liberty",
-  satellite: "https://tiles.openfreemap.org/styles/satellite" as string | null,
+  satellite: "https://tiles.openfreemap.org/styles/satellite",
   dark:      "https://tiles.openfreemap.org/styles/dark",
 };
 
+type MapStyleKey = keyof typeof MAP_STYLES;
+
+type PisteDifficulty = "all" | "green" | "blue" | "red" | "black";
+
+const DIFFICULTY_BUTTONS: { key: PisteDifficulty; label: string; color: string }[] = [
+  { key: "all",   label: "All",   color: "#6b7280" },
+  { key: "green", label: "Green", color: "#166534" },
+  { key: "blue",  label: "Blue",  color: "#1e40af" },
+  { key: "red",   label: "Red",   color: "#991b1b" },
+  { key: "black", label: "Black", color: "#18181b" },
+];
+
 export default function PlacesMap({ places, highlightedIds, selected, onSelect, onClusterSelect, onBoundsChange }: Props) {
-  const [loading, setLoading]            = useState(true);
-  const [pisteLoading, setPisteLoading]  = useState(false);
-  const [pisteError, setPisteError]      = useState(false);
-  const [pisteLoaded, setPisteLoaded]    = useState(false);
-  const [layerVis, setLayerVis]          = useState({ pistes: true, lifts: true });
-  const [hoverInfo, setHoverInfo]        = useState<{ name: string; stat: string; x: number; y: number } | null>(null);
-  const [lineHover, setLineHover]        = useState<{ name: string; kind: string; x: number; y: number } | null>(null);
-  const [mapStyle, setMapStyle]          = useState<"street"|"dark">("street");
-  const [fullscreen, setFullscreen]      = useState(false);
+  const [loading, setLoading]                       = useState(true);
+  const [pisteLoading, setPisteLoading]             = useState(false);
+  const [pisteError, setPisteError]                 = useState(false);
+  const [pisteLoaded, setPisteLoaded]               = useState(false);
+  const [layerVis, setLayerVis]                     = useState({ pistes: true, lifts: true });
+  const [hoverInfo, setHoverInfo]                   = useState<{ name: string; stat: string; x: number; y: number } | null>(null);
+  const [lineHover, setLineHover]                   = useState<{ name: string; kind: string; x: number; y: number } | null>(null);
+  const [mapStyle, setMapStyle]                     = useState<MapStyleKey>("street");
+  const [fullscreen, setFullscreen]                 = useState(false);
+  const [difficultyFilter, setDifficultyFilter]     = useState<PisteDifficulty>("all");
+  const [attributionVisible, setAttributionVisible] = useState(true);
   const containerRef               = useRef<HTMLDivElement>(null);
   const mapRef                     = useRef<any>(null);
   const mapReadyRef                = useRef(false);
@@ -73,6 +93,8 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
   const highlightedRef             = useRef(highlightedIds);
   const selectedRef                = useRef(selected);
   const layerVisRef                = useRef({ pistes: true, lifts: true });
+  const attributionControlRef      = useRef<any>(null);
+  const mlRef                      = useRef<any>(null);
 
   // Keep refs in sync with latest props
   useEffect(() => { onSelectRef.current        = onSelect;        }, [onSelect]);
@@ -82,15 +104,118 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
   useEffect(() => { highlightedRef.current     = highlightedIds;  }, [highlightedIds]);
   useEffect(() => { selectedRef.current        = selected;        }, [selected]);
 
+  // ── Difficulty filter ──────────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current || !map.getLayer("pistes")) return;
+
+    if (difficultyFilter === "all") {
+      map.setFilter("pistes", ["==", ["get", "kind"], "piste"]);
+      map.setPaintProperty("pistes", "line-opacity", 0.9);
+    } else {
+      const diffMap: Record<PisteDifficulty, string[]> = {
+        all:   [],
+        green: ["novice", "easy"],
+        blue:  ["intermediate"],
+        red:   ["advanced"],
+        black: ["expert", "freeride"],
+      };
+      const vals = diffMap[difficultyFilter];
+      map.setFilter("pistes", ["in", ["get", "difficulty"], ["literal", vals]]);
+      // Highlight beginner (#23) or expert (#24): non-matching lines at 10% opacity via filter already hides them.
+      // We restore full opacity for the selected difficulty group.
+      map.setPaintProperty("pistes", "line-opacity", 0.9);
+    }
+  }, [difficultyFilter]);
+
+  // ── Piste hover glow layer (#29) ───────────────────────────────────────────
+  const hoveredPisteIdRef = useRef<number | string | null>(null);
+
+  function addPisteHoverListeners(map: any) {
+    map.on("mouseenter", "pistes", (e: any) => {
+      map.getCanvas().style.cursor = "crosshair";
+      const feat = e.features?.[0];
+      if (!feat) return;
+      const featId = feat.id ?? feat.properties?.id;
+      hoveredPisteIdRef.current = featId;
+
+      const difficulty: string = feat.properties?.difficulty ?? "";
+      const colorMap: Record<string, string> = {
+        novice: "#166534", easy: "#166534",
+        intermediate: "#1e40af",
+        advanced: "#991b1b",
+        expert: "#18181b", freeride: "#18181b",
+      };
+      const glowColor = colorMap[difficulty] ?? "#6b7280";
+
+      // Remove any existing hover layer
+      if (map.getLayer("pistes-hover")) map.removeLayer("pistes-hover");
+
+      map.addLayer({
+        id: "pistes-hover",
+        type: "line",
+        source: "ski",
+        filter: ["==", ["id"], featId],
+        paint: {
+          "line-width": 6,
+          "line-color": glowColor,
+          "line-opacity": 0.5,
+          "line-blur": 2,
+        },
+      });
+
+      // Also update line hover tooltip
+      const name = feat.properties?.name || feat.properties?.ref || "";
+      const kind = feat.properties?.kind || "piste";
+      if (name) setLineHover({ name, kind, x: e.originalEvent.clientX, y: e.originalEvent.clientY });
+    });
+
+    map.on("mousemove", "pistes", (e: any) => {
+      const feat = e.features?.[0];
+      if (!feat) return;
+      const featId = feat.id ?? feat.properties?.id;
+
+      if (featId !== hoveredPisteIdRef.current) {
+        hoveredPisteIdRef.current = featId;
+        const difficulty: string = feat.properties?.difficulty ?? "";
+        const colorMap: Record<string, string> = {
+          novice: "#166534", easy: "#166534",
+          intermediate: "#1e40af",
+          advanced: "#991b1b",
+          expert: "#18181b", freeride: "#18181b",
+        };
+        const glowColor = colorMap[difficulty] ?? "#6b7280";
+        if (map.getLayer("pistes-hover")) map.removeLayer("pistes-hover");
+        map.addLayer({
+          id: "pistes-hover",
+          type: "line",
+          source: "ski",
+          filter: ["==", ["id"], featId],
+          paint: { "line-width": 6, "line-color": glowColor, "line-opacity": 0.5, "line-blur": 2 },
+        });
+      }
+      setLineHover(prev => prev ? { ...prev, x: e.originalEvent.clientX, y: e.originalEvent.clientY } : null);
+    });
+
+    map.on("mouseleave", "pistes", () => {
+      map.getCanvas().style.cursor = "";
+      hoveredPisteIdRef.current = null;
+      if (map.getLayer("pistes-hover")) map.removeLayer("pistes-hover");
+      setLineHover(null);
+    });
+  }
+
   // ── Selection: camera + piste overlay for the selected place ────────────
   function applySelection(map: any, place: DbPlace | null) {
     // Cancel any in-flight piste request and clear previous overlay
     pisteAbortRef.current?.abort();
     pisteAbortRef.current = null;
     setPisteError(false);
+    if (map.getLayer("pistes-hover")) map.removeLayer("pistes-hover");
     if (map.getLayer("pistes")) map.removeLayer("pistes");
     if (map.getLayer("lifts"))  map.removeLayer("lifts");
     if (map.getSource("ski"))   map.removeSource("ski");
+    setDifficultyFilter("all");
 
     if (!place) {
       setPisteLoading(false);
@@ -132,24 +257,25 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
         } });
       setPisteLoaded(true);
 
-      // Piste hover tooltips
-      for (const layer of ["pistes", "lifts"] as const) {
-        map.on("mouseenter", layer, (e: any) => {
-          map.getCanvas().style.cursor = "crosshair";
-          const feat = e.features?.[0];
-          if (!feat) return;
-          const name = feat.properties?.name || feat.properties?.ref || "";
-          const kind = feat.properties?.kind || layer;
-          if (name) setLineHover({ name, kind, x: e.originalEvent.clientX, y: e.originalEvent.clientY });
-        });
-        map.on("mousemove", layer, (e: any) => {
-          setLineHover(prev => prev ? { ...prev, x: e.originalEvent.clientX, y: e.originalEvent.clientY } : null);
-        });
-        map.on("mouseleave", layer, () => {
-          map.getCanvas().style.cursor = "";
-          setLineHover(null);
-        });
-      }
+      // Piste hover glow (#29)
+      addPisteHoverListeners(map);
+
+      // Lift hover tooltips (keep existing behaviour)
+      map.on("mouseenter", "lifts", (e: any) => {
+        map.getCanvas().style.cursor = "crosshair";
+        const feat = e.features?.[0];
+        if (!feat) return;
+        const name = feat.properties?.name || feat.properties?.ref || "";
+        const kind = feat.properties?.kind || "lift";
+        if (name) setLineHover({ name, kind, x: e.originalEvent.clientX, y: e.originalEvent.clientY });
+      });
+      map.on("mousemove", "lifts", (e: any) => {
+        setLineHover(prev => prev ? { ...prev, x: e.originalEvent.clientX, y: e.originalEvent.clientY } : null);
+      });
+      map.on("mouseleave", "lifts", () => {
+        map.getCanvas().style.cursor = "";
+        setLineHover(null);
+      });
 
       // Fit camera to the full extent of the loaded pistes, but never zoom out
       const coords = geojson.features
@@ -179,6 +305,86 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
     });
   }
 
+  // Helper: add terrain for 3D (#25/#26)
+  function tryAddTerrain(map: any) {
+    try {
+      if (!map.getSource("terrain")) {
+        map.addSource("terrain", {
+          type: "raster-dem",
+          url: "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
+          tileSize: 256,
+          encoding: "terrarium",
+        });
+      }
+      map.setTerrain({ source: "terrain", exaggeration: 1.5 });
+    } catch { /* terrain not supported in this style */ }
+  }
+
+  // Helper: add all place layers (reused on style reload)
+  function addPlaceLayers(map: any, currentStyle: MapStyleKey) {
+    map.addSource("places", {
+      type: "geojson",
+      data: buildGeoJSON(placesRef.current, highlightedRef.current, selectedRef.current?.id ?? null),
+      cluster: true,
+      clusterMaxZoom: 8,
+      clusterRadius: 55,
+      clusterProperties: {
+        hlCount: ["+", ["case", ["boolean", ["get", "highlighted"], false], 1, 0]],
+      },
+    });
+
+    // Cluster circles
+    map.addLayer({
+      id: "clusters", type: "circle", source: "places",
+      filter: ["has", "point_count"],
+      paint: {
+        "circle-radius": ["step", ["get", "point_count"], 14, 10, 20, 50, 26],
+        "circle-color": ["case", [">", ["get", "hlCount"], 0], "#2b44ff", "#9ca3af"],
+        "circle-opacity": ["case", [">", ["get", "hlCount"], 0], 0.85, 0.35],
+        "circle-stroke-color": "#000", "circle-stroke-width": 2,
+      },
+    });
+    map.addLayer({
+      id: "cluster-count", type: "symbol", source: "places",
+      filter: ["has", "point_count"],
+      layout: { "text-field": "{point_count_abbreviated}", "text-size": 10 },
+      paint: { "text-color": ["case", [">", ["get", "hlCount"], 0], "#fff", "#000"] },
+    });
+
+    // Individual points — circle-radius scales by km (#112)
+    map.addLayer({
+      id: "place-circles", type: "circle", source: "places",
+      filter: ["!", ["has", "point_count"]],
+      paint: {
+        "circle-radius": ["case",
+          ["boolean", ["get", "selected"], false], 13,
+          ["interpolate", ["linear"], ["coalesce", ["get", "km"], 0],
+            0, 6, 50, 8, 150, 10, 300, 13],
+        ],
+        "circle-color": ["case",
+          ["boolean", ["get", "selected"], false], "#2b44ff",
+          ["boolean", ["get", "highlighted"], false], "#2b44ff",
+          "#d1d5db"],
+        "circle-stroke-color": ["case", ["boolean", ["get", "selected"], false], "#fff", "#000"],
+        "circle-stroke-width": ["case", ["boolean", ["get", "selected"], false], 3, 2],
+        "circle-opacity": ["case",
+          ["boolean", ["get", "selected"], false], 1,
+          ["boolean", ["get", "highlighted"], false], 1,
+          0.2],
+      },
+    });
+    map.addLayer({
+      id: "place-labels", type: "symbol", source: "places",
+      filter: ["all", ["!", ["has", "point_count"]], ["boolean", ["get", "highlighted"], false]],
+      layout: { "text-field": ["get", "name"], "text-offset": [0, 1.5], "text-anchor": "top", "text-size": 11, "text-optional": true },
+      paint: {
+        "text-color": currentStyle === "dark" ? "#fff" : "#111",
+        "text-halo-color": currentStyle === "dark" ? "#000" : "#fff",
+        "text-halo-width": 1.5,
+      },
+    });
+  }
+
   // ── Init map once ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -186,6 +392,8 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
 
     import("maplibre-gl").then(async ml => {
       if (cancelled || !containerRef.current) return;
+
+      mlRef.current = ml;
 
       // Point MapLibre at the worker we copied to /public
       ml.setWorkerUrl("/maplibre-gl-worker.mjs");
@@ -217,7 +425,9 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
         attributionControl: false,
       });
       mapRef.current = map;
-      map.addControl(new ml.AttributionControl({ compact: true }), "bottom-left");
+      const attrControl = new ml.AttributionControl({ compact: true });
+      attributionControlRef.current = attrControl;
+      map.addControl(attrControl, "bottom-left");
       map.addControl(new ml.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-right");
 
       // Use style.load (fires before all tiles) so we can interact sooner
@@ -232,60 +442,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           { padding: 40, duration: 0 },
         );
 
-        // Source with clustering
-        map.addSource("places", {
-          type: "geojson",
-          data: buildGeoJSON(placesRef.current, highlightedRef.current, selectedRef.current?.id ?? null),
-          cluster: true,
-          clusterMaxZoom: 8,
-          clusterRadius: 55,
-          clusterProperties: {
-            hlCount: ["+", ["case", ["boolean", ["get", "highlighted"], false], 1, 0]],
-          },
-        });
-
-        // Cluster circles
-        map.addLayer({
-          id: "clusters", type: "circle", source: "places",
-          filter: ["has", "point_count"],
-          paint: {
-            "circle-radius": ["step", ["get", "point_count"], 14, 10, 20, 50, 26],
-            "circle-color": ["case", [">", ["get", "hlCount"], 0], "#2b44ff", "#9ca3af"],
-            "circle-opacity": ["case", [">", ["get", "hlCount"], 0], 0.85, 0.35],
-            "circle-stroke-color": "#000", "circle-stroke-width": 2,
-          },
-        });
-        map.addLayer({
-          id: "cluster-count", type: "symbol", source: "places",
-          filter: ["has", "point_count"],
-          layout: { "text-field": "{point_count_abbreviated}", "text-size": 10 },
-          paint: { "text-color": ["case", [">", ["get", "hlCount"], 0], "#fff", "#000"] },
-        });
-
-        // Individual points
-        map.addLayer({
-          id: "place-circles", type: "circle", source: "places",
-          filter: ["!", ["has", "point_count"]],
-          paint: {
-            "circle-radius": ["case", ["boolean", ["get", "selected"], false], 13, 8],
-            "circle-color": ["case",
-              ["boolean", ["get", "selected"], false], "#2b44ff",
-              ["boolean", ["get", "highlighted"], false], "#2b44ff",
-              "#d1d5db"],
-            "circle-stroke-color": ["case", ["boolean", ["get", "selected"], false], "#fff", "#000"],
-            "circle-stroke-width": ["case", ["boolean", ["get", "selected"], false], 3, 2],
-            "circle-opacity": ["case",
-              ["boolean", ["get", "selected"], false], 1,
-              ["boolean", ["get", "highlighted"], false], 1,
-              0.2],
-          },
-        });
-        map.addLayer({
-          id: "place-labels", type: "symbol", source: "places",
-          filter: ["all", ["!", ["has", "point_count"]], ["boolean", ["get", "highlighted"], false]],
-          layout: { "text-field": ["get", "name"], "text-offset": [0, 1.5], "text-anchor": "top", "text-size": 11, "text-optional": true },
-          paint: { "text-color": "#111", "text-halo-color": "#fff", "text-halo-width": 1.5 },
-        });
+        addPlaceLayers(map, "street");
 
         // Cluster click → zoom in + filter list to cluster contents
         map.on("click", "clusters", async e => {
@@ -342,8 +499,6 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
         map.on("idle", () => setLoading(false));
 
         // Report visible place IDs and load piste overlay on every camera settle
-        let pisteAbort: AbortController | null = null;
-
         function onMoveEnd() {
           const bounds = map.getBounds();
           const ids = placesRef.current
@@ -403,28 +558,41 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReadyRef.current) return;
-    const styleUrl = mapStyle === "dark"
-      ? "https://tiles.openfreemap.org/styles/dark"
-      : "https://tiles.openfreemap.org/styles/liberty";
+    const styleUrl = MAP_STYLES[mapStyle];
     map.setStyle(styleUrl);
     // Re-add sources/layers after style reload
     map.once("style.load", () => {
       if (!map.getSource("places")) {
-        map.addSource("places", {
-          type: "geojson",
-          data: buildGeoJSON(placesRef.current, highlightedRef.current, selectedRef.current?.id ?? null),
-          cluster: true, clusterMaxZoom: 8, clusterRadius: 55,
-          clusterProperties: { hlCount: ["+", ["case", ["boolean", ["get", "highlighted"], false], 1, 0]] },
-        });
-        map.addLayer({ id: "clusters", type: "circle", source: "places", filter: ["has", "point_count"], paint: { "circle-radius": ["step", ["get", "point_count"], 14, 10, 20, 50, 26], "circle-color": ["case", [">", ["get", "hlCount"], 0], "#2b44ff", "#9ca3af"], "circle-opacity": ["case", [">", ["get", "hlCount"], 0], 0.85, 0.35], "circle-stroke-color": "#000", "circle-stroke-width": 2 } });
-        map.addLayer({ id: "cluster-count", type: "symbol", source: "places", filter: ["has", "point_count"], layout: { "text-field": "{point_count_abbreviated}", "text-size": 10 }, paint: { "text-color": ["case", [">", ["get", "hlCount"], 0], "#fff", "#000"] } });
-        map.addLayer({ id: "place-circles", type: "circle", source: "places", filter: ["!", ["has", "point_count"]], paint: { "circle-radius": ["case", ["boolean", ["get", "selected"], false], 13, 8], "circle-color": ["case", ["boolean", ["get", "selected"], false], "#2b44ff", ["boolean", ["get", "highlighted"], false], "#2b44ff", "#d1d5db"], "circle-stroke-color": ["case", ["boolean", ["get", "selected"], false], "#fff", "#000"], "circle-stroke-width": ["case", ["boolean", ["get", "selected"], false], 3, 2], "circle-opacity": ["case", ["boolean", ["get", "selected"], false], 1, ["boolean", ["get", "highlighted"], false], 1, 0.2] } });
-        map.addLayer({ id: "place-labels", type: "symbol", source: "places", filter: ["all", ["!", ["has", "point_count"]], ["boolean", ["get", "highlighted"], false]], layout: { "text-field": ["get", "name"], "text-offset": [0, 1.5], "text-anchor": "top", "text-size": 11, "text-optional": true }, paint: { "text-color": mapStyle === "dark" ? "#fff" : "#111", "text-halo-color": mapStyle === "dark" ? "#000" : "#fff", "text-halo-width": 1.5 } });
+        addPlaceLayers(map, mapStyle);
       }
-      // Re-add piste overlay if selected
+      // Satellite + 3D terrain (#25/#26)
+      if (mapStyle === "satellite") {
+        tryAddTerrain(map);
+      }
+      // Re-add piste overlay if selected; also reset difficulty filter
+      setDifficultyFilter("all");
       if (selectedRef.current) applySelection(map, selectedRef.current);
     });
   }, [mapStyle]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Attribution toggle (#68) ─────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const ml  = mlRef.current;
+    if (!map || !ml || !mapReadyRef.current) return;
+    if (attributionVisible) {
+      if (!attributionControlRef.current) {
+        const ctrl = new ml.AttributionControl({ compact: true });
+        attributionControlRef.current = ctrl;
+        map.addControl(ctrl, "bottom-left");
+      }
+    } else {
+      if (attributionControlRef.current) {
+        try { map.removeControl(attributionControlRef.current); } catch {}
+        attributionControlRef.current = null;
+      }
+    }
+  }, [attributionVisible]);
 
   function toggleLayer(layer: "pistes" | "lifts") {
     const next = { ...layerVisRef.current, [layer]: !layerVisRef.current[layer] };
@@ -435,6 +603,39 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       map.setLayoutProperty(layer, "visibility", next[layer] ? "visible" : "none");
     }
   }
+
+  function applyDifficultyFilter(diff: PisteDifficulty) {
+    setDifficultyFilter(diff);
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current || !map.getLayer("pistes")) return;
+
+    if (diff === "all") {
+      map.setFilter("pistes", ["==", ["get", "kind"], "piste"]);
+      map.setPaintProperty("pistes", "line-opacity", 0.9);
+    } else {
+      const diffMap: Record<PisteDifficulty, string[]> = {
+        all:   [],
+        green: ["novice", "easy"],
+        blue:  ["intermediate"],
+        red:   ["advanced"],
+        black: ["expert", "freeride"],
+      };
+      const vals = diffMap[diff];
+      // Show only the selected difficulty (#19)
+      map.setFilter("pistes", ["in", ["get", "difficulty"], ["literal", vals]]);
+      map.setPaintProperty("pistes", "line-opacity", 0.9);
+    }
+  }
+
+  const btnBase: React.CSSProperties = {
+    border: "2px solid #000",
+    padding: "0.3rem 0.5rem",
+    fontSize: "0.55rem",
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    cursor: "pointer",
+  };
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", ...(fullscreen ? { position: "fixed", inset: 0, zIndex: 9999 } : {}) }}>
@@ -521,6 +722,31 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           ))}
         </div>
       )}
+      {/* Difficulty filter buttons (#19, #23, #24) — below style toggles in top-left */}
+      {pisteLoaded && (
+        <div style={{
+          position: "absolute", top: "2.6rem", left: "0.75rem",
+          display: "flex", gap: "0.25rem", zIndex: 5,
+        }}>
+          {DIFFICULTY_BUTTONS.map(({ key, label, color }) => {
+            const active = difficultyFilter === key;
+            return (
+              <button
+                key={key}
+                onClick={() => applyDifficultyFilter(key)}
+                style={{
+                  ...btnBase,
+                  background: active ? color : "rgba(255,255,255,0.92)",
+                  color: active ? "#fff" : "#111",
+                  borderColor: active ? color : "#000",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {/* Difficulty legend — shown when piste data is loaded */}
       {pisteLoaded && layerVis.pistes && (
         <div style={{
@@ -549,20 +775,41 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           ))}
         </div>
       )}
-      {/* Map style + fullscreen toggles */}
+      {/* Map style + fullscreen + attribution + print toggles (#25, #68, #72) */}
       <div style={{ position: "absolute", top: "0.75rem", left: "0.75rem", display: "flex", gap: "0.25rem", zIndex: 5 }}>
-        {(["street", "dark"] as const).map(s => (
+        {(["street", "satellite", "dark"] as const).map(s => (
           <button
             key={s}
             onClick={() => setMapStyle(s)}
-            style={{ background: mapStyle === s ? "#000" : "rgba(255,255,255,0.92)", color: mapStyle === s ? "#fff" : "#111", border: "2px solid #000", padding: "0.3rem 0.5rem", fontSize: "0.55rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer" }}
+            style={{
+              ...btnBase,
+              background: mapStyle === s ? "#000" : "rgba(255,255,255,0.92)",
+              color: mapStyle === s ? "#fff" : "#111",
+            }}
           >
-            {s === "street" ? "Map" : "Dark"}
+            {s === "street" ? "Map" : s === "satellite" ? "Sat" : "Dark"}
           </button>
         ))}
         <button
+          onClick={() => setAttributionVisible(v => !v)}
+          title={attributionVisible ? "Hide attribution" : "Show attribution"}
+          style={{
+            ...btnBase,
+            background: attributionVisible ? "rgba(255,255,255,0.92)" : "#000",
+            color: attributionVisible ? "#111" : "#fff",
+          }}
+        >
+          ©
+        </button>
+        <button
+          onClick={() => window.print()}
+          style={{ ...btnBase, background: "rgba(255,255,255,0.92)", color: "#111" }}
+        >
+          Print
+        </button>
+        <button
           onClick={() => setFullscreen(v => !v)}
-          style={{ background: "rgba(255,255,255,0.92)", color: "#111", border: "2px solid #000", padding: "0.3rem 0.5rem", fontSize: "0.55rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer" }}
+          style={{ ...btnBase, background: "rgba(255,255,255,0.92)", color: "#111" }}
         >
           {fullscreen ? "Exit" : "⛶"}
         </button>

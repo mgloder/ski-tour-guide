@@ -1,11 +1,12 @@
 "use client";
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import type { DbPlace } from "@/lib/places";
 import { getRecommendedEquipment, getRecommendedExercises } from "@/lib/places";
 import { equipment } from "@/data/equipment";
 import { exercises } from "@/data/exercises";
 import PlacesMap from "./places-map";
+import QuizModal from "./quiz-modal";
 import { useIsMobile } from "@/lib/use-is-mobile";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -66,6 +67,7 @@ const PAGE = 60;
 const SK_FILTERS   = "ski-filters-v1";
 const SK_FAVORITES = "ski-favorites-v1";
 const SK_RECENT    = "ski-recent-v1";
+const SK_TRIP      = "ski-trip-v1";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -341,6 +343,107 @@ function FeatureBadges({ place, selected }: { place: DbPlace; selected: boolean 
   );
 }
 
+// ── Compare overlay (defined outside main component) ─────────────────────────
+
+type CompareOverlayProps = {
+  compareIds: Set<string>;
+  places: DbPlace[];
+  onClose: () => void;
+};
+
+function CompareOverlay({ compareIds, places, onClose }: CompareOverlayProps) {
+  const comparePlaces = [...compareIds].map(id => places.find(p => p.id === id)).filter(Boolean) as DbPlace[];
+  const labelStyle: React.CSSProperties = { fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.5, padding: "0.4rem 0.75rem", background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.1)" };
+  const cellStyle: React.CSSProperties = { padding: "0.4rem 0.75rem", fontSize: "0.8rem", fontWeight: 700, borderBottom: "1px solid rgba(255,255,255,0.1)" };
+
+  const rows: { label: string; value: (p: DbPlace) => string }[] = [
+    { label: "Country",      value: p => p.country ?? "—" },
+    { label: "Total km",     value: p => p.total_km ? `${p.total_km} km` : "—" },
+    { label: "Vertical",     value: p => p.vertical_drop ? `${p.vertical_drop}m` : "—" },
+    { label: "Lifts",        value: p => p.lifts_count ? String(p.lifts_count) : "—" },
+    { label: "Altitude",     value: p => (p.altitude_base || p.altitude_peak) ? `${p.altitude_base}–${p.altitude_peak}m` : "—" },
+    { label: "Green runs",   value: p => p.runs_green  ? String(p.runs_green)  : "—" },
+    { label: "Blue runs",    value: p => p.runs_blue   ? String(p.runs_blue)   : "—" },
+    { label: "Red runs",     value: p => p.runs_red    ? String(p.runs_red)    : "—" },
+    { label: "Black runs",   value: p => p.runs_black  ? String(p.runs_black)  : "—" },
+    { label: "Tags",         value: p => (p.tags ?? []).slice(0, 4).join(", ") || "—" },
+  ];
+
+  const colCount = comparePlaces.length + 1;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.85)", overflowY: "auto" }} onClick={onClose}>
+      <div style={{ maxWidth: "900px", margin: "2rem auto", padding: "0 1rem 4rem" }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <p style={{ color: "#fff", fontWeight: 900, fontSize: "1.1rem" }}>Compare resorts</p>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: "1.5rem", lineHeight: 1, opacity: 0.6 }}>×</button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${colCount}, 1fr)`, border: "2px solid rgba(255,255,255,0.3)" }}>
+          {/* Header row */}
+          <div style={labelStyle} />
+          {comparePlaces.map(p => (
+            <div key={p.id} style={{ ...labelStyle, color: "#fff", opacity: 1, fontWeight: 900, fontSize: "0.75rem" }}>{p.name}</div>
+          ))}
+          {/* Data rows */}
+          {rows.map(row => (
+            <>
+              <div key={`lbl-${row.label}`} style={labelStyle}>{row.label}</div>
+              {comparePlaces.map(p => (
+                <div key={`${p.id}-${row.label}`} style={{ ...cellStyle, color: "#fff" }}>{row.value(p)}</div>
+              ))}
+            </>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Trip overlay (defined outside main component) ─────────────────────────────
+
+type TripOverlayProps = {
+  tripIds: Set<string>;
+  places: DbPlace[];
+  onClose: () => void;
+  onRemove: (id: string) => void;
+};
+
+function TripOverlay({ tripIds, places, onClose, onRemove }: TripOverlayProps) {
+  const tripPlaces = [...tripIds].map(id => places.find(p => p.id === id)).filter(Boolean) as DbPlace[];
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.85)", overflowY: "auto" }} onClick={onClose}>
+      <div style={{ maxWidth: "600px", margin: "2rem auto", padding: "0 1rem 4rem" }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <p style={{ color: "#fff", fontWeight: 900, fontSize: "1.1rem" }}>My trip ({tripPlaces.length})</p>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: "1.5rem", lineHeight: 1, opacity: 0.6 }}>×</button>
+        </div>
+        {tripPlaces.length === 0 ? (
+          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.85rem" }}>No resorts added yet. Open a resort and tap "Add to trip".</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {tripPlaces.map(p => (
+              <div key={p.id} style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.2)", padding: "0.75rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <p style={{ color: "#fff", fontWeight: 900, fontSize: "0.9rem", marginBottom: "0.2rem" }}>{p.name}</p>
+                  <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    {p.country}{p.total_km ? ` · ${p.total_km} km` : ""}{p.vertical_drop ? ` · ${p.vertical_drop}m vert` : ""}
+                  </p>
+                </div>
+                <button
+                  onClick={() => onRemove(p.id)}
+                  style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", padding: "0.25rem 0.5rem", flexShrink: 0, marginLeft: "0.75rem" }}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
@@ -365,7 +468,18 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   const [copied,        setCopied]        = useState<"coords"|"url"|null>(null);
   const [showFavsOnly,  setShowFavsOnly]  = useState(false);
   const [filtersOpen,   setFiltersOpen]   = useState(false);
+
+  // Feature states
+  const [showQuiz,      setShowQuiz]      = useState(false);
+  const [compareIds,    setCompareIds]    = useState<Set<string>>(new Set());
+  const [showCompare,   setShowCompare]   = useState(false);
+  const [tripIds,       setTripIds]       = useState<Set<string>>(new Set());
+  const [showTrip,      setShowTrip]      = useState(false);
+  const [compactCards,  setCompactCards]  = useState(false);
+  const [placeWeather,  setPlaceWeather]  = useState<Record<string, { temp: number; wind: number; snow: number; desc: string } | "loading" | "error">>({});
+
   const listRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const countries = useMemo(
     () => [...new Set(places.map(p => p.country).filter(Boolean))].sort() as string[],
@@ -381,6 +495,10 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     try {
       const r: string[] = JSON.parse(localStorage.getItem(SK_RECENT) || "[]");
       setRecentIds(r);
+    } catch {}
+    try {
+      const t: string[] = JSON.parse(localStorage.getItem(SK_TRIP) || "[]");
+      setTripIds(new Set(t));
     } catch {}
     // URL params take priority; fall back to saved filters
     const params = new URLSearchParams(window.location.search);
@@ -466,6 +584,41 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     query   && { key: "query",   label: `"${query}"`,                                                       clear: () => reset({ query: "" }) },
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
+  // ── Infinite scroll sentinel ──────────────────────────────────────────────
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0]?.isIntersecting) {
+        setVisible(v => Math.min(v + PAGE, displayPlaces.length));
+      }
+    }, { threshold: 0 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [displayPlaces.length, visible]);
+
+  // ── Weather fetch ─────────────────────────────────────────────────────────
+  const fetchWeather = useCallback(async (place: DbPlace) => {
+    if (!place.latitude || !place.longitude) return;
+    if (placeWeather[place.id]) return;
+    setPlaceWeather(prev => ({ ...prev, [place.id]: "loading" }));
+    try {
+      const res = await fetch(`/api/weather?lat=${place.latitude}&lng=${place.longitude}`);
+      if (!res.ok) throw new Error("bad response");
+      const data = await res.json() as { temperature_2m: number; wind_speed_10m: number; snowfall: number; description: string };
+      setPlaceWeather(prev => ({
+        ...prev,
+        [place.id]: { temp: data.temperature_2m, wind: data.wind_speed_10m, snow: data.snowfall, desc: data.description },
+      }));
+    } catch {
+      setPlaceWeather(prev => ({ ...prev, [place.id]: "error" }));
+    }
+  }, [placeWeather]);
+
+  useEffect(() => {
+    if (selected) fetchWeather(selected);
+  }, [selected, fetchWeather]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   function reset(patch: Partial<{ level: string|null; terrain: string|null; country: string|null; size: string|null; vert: string|null; query: string; month: string|null }>) {
     if ("level"   in patch) setLevel(patch.level!);
@@ -516,6 +669,29 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     });
   }
 
+  function toggleCompare(e: React.MouseEvent, placeId: string) {
+    e.stopPropagation();
+    setCompareIds(prev => {
+      const next = new Set(prev);
+      if (next.has(placeId)) {
+        next.delete(placeId);
+      } else if (next.size < 3) {
+        next.add(placeId);
+      }
+      return next;
+    });
+  }
+
+  function toggleTrip(e: React.MouseEvent, placeId: string) {
+    e.stopPropagation();
+    setTripIds(prev => {
+      const next = new Set(prev);
+      if (next.has(placeId)) next.delete(placeId); else next.add(placeId);
+      try { localStorage.setItem(SK_TRIP, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+
   function requestGeo() {
     if (!navigator.geolocation) return;
     setGeoLoading(true);
@@ -553,14 +729,34 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     const equipItems = equipment.filter(e => equipIds.includes(e.id));
     const exItems    = exercises.filter(e => exIds.includes(e.id));
     const isFav      = favorites.has(place.id);
+    const isOnTrip   = tripIds.has(place.id);
     const mapsUrl    = place.latitude && place.longitude
       ? `https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`
       : null;
     const seasonStatus = getSeasonStatus(place.best_months);
+    const weather = placeWeather[place.id];
 
     return (
       <div onClick={e => e.stopPropagation()} style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "2px solid rgba(255,255,255,0.3)", display: "flex", flexDirection: "column", gap: "0.75rem", color: "#fff" }}>
         {place.description && <p style={{ fontSize: "0.75rem", opacity: 0.85, lineHeight: 1.5, margin: 0 }}>{place.description}</p>}
+
+        {/* Weather widget */}
+        {weather && weather !== "error" && (
+          <div style={{ display: "flex", gap: "0.5rem", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.85, flexWrap: "wrap" }}>
+            {weather === "loading" ? (
+              <span>…</span>
+            ) : (
+              <>
+                <span>{weather.temp}°C</span>
+                <span>·</span>
+                <span>Wind {weather.wind} km/h</span>
+                <span>·</span>
+                <span>{weather.desc}</span>
+                {weather.snow > 0 && <><span>·</span><span>Snow: {weather.snow} cm</span></>}
+              </>
+            )}
+          </div>
+        )}
 
         {/* Stats */}
         <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.8 }}>
@@ -609,6 +805,9 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           {place.website && <a href={place.website} target="_blank" rel="noopener noreferrer" style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.35rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>Website →</a>}
           {place.skimap_url && <a href={place.skimap_url} target="_blank" rel="noopener noreferrer" style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.35rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>Trail map →</a>}
           {mapsUrl && <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.35rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>Maps ↗</a>}
+          {place.latitude && place.longitude && (
+            <a href={`https://www.panomax.com/search#${encodeURIComponent(place.name)}`} target="_blank" rel="noopener noreferrer" style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.35rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>Webcams ↗</a>
+          )}
           <button onClick={e => copyCoords(e, place)} style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", background: "transparent", padding: "0.35rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer" }}>
             {copied === "coords" ? "Copied!" : "Coords"}
           </button>
@@ -617,6 +816,9 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           </button>
           <button onClick={e => toggleFavorite(e, place.id)} style={{ border: "2px solid rgba(255,255,255,0.6)", color: isFav ? "#fbbf24" : "#fff", background: "transparent", padding: "0.35rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer" }}>
             {isFav ? "★ Saved" : "☆ Save"}
+          </button>
+          <button onClick={e => toggleTrip(e, place.id)} style={{ border: "2px solid rgba(255,255,255,0.6)", color: isOnTrip ? "#4ade80" : "#fff", background: "transparent", padding: "0.35rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer" }}>
+            {isOnTrip ? "✓ On trip" : "Add to trip"}
           </button>
         </div>
 
@@ -644,6 +846,45 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   function renderItem(place: DbPlace, padding: string) {
     const isSelected = selected?.id === place.id;
     const isFav = favorites.has(place.id);
+    const isInCompare = compareIds.has(place.id);
+
+    if (compactCards && !isSelected) {
+      return (
+        <div
+          key={place.id}
+          onClick={() => handleSelect(place)}
+          style={{ padding: "0.4rem 1rem", borderBottom: "2px solid currentColor", cursor: "pointer", background: isSelected ? "var(--bx-primary, #2b44ff)" : "transparent", color: isSelected ? "#fff" : "inherit", transition: "background 0.15s" }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontWeight: 900, fontSize: "0.85rem", margin: 0 }}>{place.name}</p>
+              <div style={{ display: "flex", gap: "0.5rem", fontSize: "0.58rem", textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.55, marginTop: "0.1rem", flexWrap: "wrap" }}>
+                <span>{place.country}</span>
+                {(place.total_km ?? 0) > 0 && <span>{place.total_km} km</span>}
+                {(place.vertical_drop ?? 0) > 0 && <span>{place.vertical_drop}m vert</span>}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "0.2rem", flexShrink: 0, alignItems: "center" }}>
+              <button
+                onClick={e => toggleCompare(e, place.id)}
+                style={{ width: 28, height: 28, border: "1.5px solid currentColor", background: isInCompare ? "var(--bx-primary,#2b44ff)" : "transparent", color: isInCompare ? "#fff" : "inherit", cursor: "pointer", fontSize: "0.85rem", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                aria-label={isInCompare ? "Remove from compare" : "Add to compare"}
+              >
+                +
+              </button>
+              <button
+                onClick={e => toggleFavorite(e, place.id)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1rem", color: isFav ? "#fbbf24" : isSelected ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.2)", flexShrink: 0, padding: "0.25rem", lineHeight: 1 }}
+                aria-label={isFav ? "Remove from saved" : "Save"}
+              >
+                {isFav ? "★" : "☆"}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         key={place.id}
@@ -655,13 +896,22 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
             <p style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.6, marginBottom: "0.15rem" }}>{place.country} · {place.region}</p>
             <p style={{ fontWeight: 900, fontSize: "0.95rem", marginBottom: "0.2rem" }}>{place.name}</p>
           </div>
-          <button
-            onClick={e => toggleFavorite(e, place.id)}
-            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1rem", color: isFav ? "#fbbf24" : isSelected ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.2)", flexShrink: 0, padding: "0.25rem", lineHeight: 1 }}
-            aria-label={isFav ? "Remove from saved" : "Save"}
-          >
-            {isFav ? "★" : "☆"}
-          </button>
+          <div style={{ display: "flex", gap: "0.2rem", flexShrink: 0, alignItems: "center" }}>
+            <button
+              onClick={e => toggleCompare(e, place.id)}
+              style={{ width: 28, height: 28, border: "1.5px solid currentColor", background: isInCompare ? "var(--bx-primary,#2b44ff)" : "transparent", color: isInCompare ? "#fff" : "inherit", cursor: "pointer", fontSize: "0.85rem", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              aria-label={isInCompare ? "Remove from compare" : "Add to compare"}
+            >
+              +
+            </button>
+            <button
+              onClick={e => toggleFavorite(e, place.id)}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1rem", color: isFav ? "#fbbf24" : isSelected ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.2)", flexShrink: 0, padding: "0.25rem", lineHeight: 1 }}
+              aria-label={isFav ? "Remove from saved" : "Save"}
+            >
+              {isFav ? "★" : "☆"}
+            </button>
+          </div>
         </div>
         <div style={{ display: "flex", gap: "0.6rem", fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.05em", opacity: isSelected ? 0.85 : 0.55, flexWrap: "wrap" }}>
           {(place.total_km     ?? 0) > 0 && <span>{place.total_km} km</span>}
@@ -796,6 +1046,11 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
                 ★ Saved
               </button>
 
+              {/* My level quiz */}
+              <button onClick={() => setShowQuiz(true)} style={{ height: "44px", padding: "0 0.6rem", border: "2px solid currentColor", background: "transparent", cursor: "pointer", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0, color: "inherit", whiteSpace: "nowrap" }}>
+                My level
+              </button>
+
               {activeFilterCount > 0 && (
                 <button onClick={clearAll} style={{ height: "44px", padding: "0 0.6rem", border: "2px solid currentColor", background: "transparent", cursor: "pointer", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0, color: "inherit" }}>✕</button>
               )}
@@ -809,14 +1064,26 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
                 </button>
               )}
               {displayPlaces.length === 0 ? renderEmpty() : visiblePlaces.map(place => renderItem(place, "0.875rem 1rem"))}
-              {visible < displayPlaces.length && (
-                <button onClick={() => setVisible(v => v + PAGE)} style={{ border: "none", borderTop: "2px solid currentColor", background: "transparent", padding: "1rem", cursor: "pointer", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", width: "100%", textAlign: "center", minHeight: "52px" }}>
-                  Show {Math.min(PAGE, displayPlaces.length - visible)} more
-                </button>
-              )}
+              <div ref={sentinelRef} style={{ height: 1 }} />
             </div>
           </div>
         )}
+
+        {/* Compare floating bar */}
+        {compareIds.size >= 2 && (
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200, background: "var(--bx-primary,#2b44ff)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderTop: "3px solid currentColor" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Compare {compareIds.size} resorts</span>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button onClick={() => setShowCompare(true)} style={{ border: "2px solid #fff", background: "#fff", color: "var(--bx-primary,#2b44ff)", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em" }}>View →</button>
+              <button onClick={() => setCompareIds(new Set())} style={{ border: "2px solid rgba(255,255,255,0.6)", background: "transparent", color: "#fff", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.85rem", fontWeight: 900 }}>×</button>
+            </div>
+          </div>
+        )}
+
+        {/* Overlays */}
+        {showQuiz && <QuizModal onClose={() => setShowQuiz(false)} onResult={(lvl) => { setLevel(lvl); setShowQuiz(false); }} />}
+        {showCompare && <CompareOverlay compareIds={compareIds} places={places} onClose={() => setShowCompare(false)} />}
+        {showTrip && <TripOverlay tripIds={tripIds} places={places} onClose={() => setShowTrip(false)} onRemove={id => { setTripIds(prev => { const next = new Set(prev); next.delete(id); try { localStorage.setItem(SK_TRIP, JSON.stringify([...next])); } catch {} return next; }); }} />}
       </div>
     );
   }
@@ -853,7 +1120,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
                 </span>
               </p>
             </div>
-            <div style={{ display: "flex", gap: "0.3rem", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "0.3rem", alignItems: "center", flexWrap: "wrap" }}>
               {/* Sort */}
               <div style={{ position: "relative" }}>
                 <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ ...selectStyle, fontSize: "0.65rem", padding: "0.25rem 1.4rem 0.25rem 0.4rem" }}>
@@ -867,6 +1134,31 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
                 style={{ border: "2px solid currentColor", background: showFavsOnly ? "currentColor" : "transparent", color: showFavsOnly ? "var(--bx-paper,#fff)" : "inherit", padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}
               >
                 ★{favorites.size > 0 ? ` ${favorites.size}` : ""}
+              </button>
+              {/* Trip counter */}
+              {tripIds.size > 0 && (
+                <button
+                  onClick={() => setShowTrip(true)}
+                  style={{ border: "2px solid currentColor", background: "transparent", padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}
+                >
+                  Trip · {tripIds.size}
+                </button>
+              )}
+              {/* Find my level */}
+              <button
+                onClick={() => setShowQuiz(true)}
+                style={{ border: "2px solid currentColor", background: "transparent", padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}
+              >
+                Find my level
+              </button>
+              {/* Compact toggle */}
+              <button
+                onClick={() => setCompactCards(v => !v)}
+                style={{ border: "2px solid currentColor", background: compactCards ? "currentColor" : "transparent", color: compactCards ? "var(--bx-paper,#fff)" : "inherit", padding: "0.25rem 0.5rem", cursor: "pointer", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.05em", whiteSpace: "nowrap" }}
+                aria-label="Toggle compact cards"
+                title="Toggle compact cards"
+              >
+                ≡
               </button>
               {/* Filters toggle */}
               <button
@@ -1003,12 +1295,23 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
 
         {/* List */}
         {displayPlaces.length === 0 ? renderEmpty() : visiblePlaces.map(place => renderItem(place, "0.875rem 1rem"))}
-        {visible < displayPlaces.length && (
-          <button onClick={() => setVisible(v => v + PAGE)} style={{ border: "none", borderTop: "2px solid currentColor", background: "transparent", padding: "0.75rem 1rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", width: "100%", textAlign: "center" }}>
-            Show {Math.min(PAGE, displayPlaces.length - visible)} more
-            <span style={{ opacity: 0.4, marginLeft: "0.5rem" }}>({displayPlaces.length - visible} remaining)</span>
-          </button>
+        <div ref={sentinelRef} style={{ height: 1 }} />
+
+        {/* Compare floating bar */}
+        {compareIds.size >= 2 && (
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200, background: "var(--bx-primary,#2b44ff)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderTop: "3px solid currentColor" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Compare {compareIds.size} resorts</span>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button onClick={() => setShowCompare(true)} style={{ border: "2px solid #fff", background: "#fff", color: "var(--bx-primary,#2b44ff)", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em" }}>View →</button>
+              <button onClick={() => setCompareIds(new Set())} style={{ border: "2px solid rgba(255,255,255,0.6)", background: "transparent", color: "#fff", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.85rem", fontWeight: 900 }}>×</button>
+            </div>
+          </div>
         )}
+
+        {/* Overlays */}
+        {showQuiz && <QuizModal onClose={() => setShowQuiz(false)} onResult={(lvl) => { setLevel(lvl); setShowQuiz(false); }} />}
+        {showCompare && <CompareOverlay compareIds={compareIds} places={places} onClose={() => setShowCompare(false)} />}
+        {showTrip && <TripOverlay tripIds={tripIds} places={places} onClose={() => setShowTrip(false)} onRemove={id => { setTripIds(prev => { const next = new Set(prev); next.delete(id); try { localStorage.setItem(SK_TRIP, JSON.stringify([...next])); } catch {} return next; }); }} />}
       </div>
     </div>
   );

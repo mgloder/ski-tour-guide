@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getPlaces } from "@/lib/places";
+import HomeClient from "@/components/home-client";
 
 const modules = [
   {
@@ -65,6 +66,9 @@ export default async function Home() {
             Search
           </button>
         </form>
+
+        {/* Client-side interactive sections: random destination, training teaser, level recommendations */}
+        <HomeClient places={places} />
       </div>
 
       {/* Stats bar */}

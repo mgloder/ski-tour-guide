@@ -1,9 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { equipment, type SkillLevel } from "@/data/equipment";
 import BodyMap, { type BodyZoneId } from "@/components/body-map";
 import { useIsMobile } from "@/lib/use-is-mobile";
+
+// Equipment ID → relevant place terrain tags/links
+const EQUIPMENT_PLACE_LINKS: Record<string, { label: string; href: string }[]> = {
+  "avalanche-beacon":    [{ label: "Backcountry destinations", href: "/places?tags=backcountry" }],
+  "avalanche-airbag-pack": [{ label: "Backcountry destinations", href: "/places?tags=backcountry" }],
+  "all-mountain-skis":  [{ label: "Powder resorts", href: "/places?tags=powder" }],
+  "ski-helmet":         [{ label: "Beginner-friendly resorts", href: "/places?tags=beginner-friendly" }],
+  "alpine-ski-boots":   [{ label: "Beginner-friendly resorts", href: "/places?tags=beginner-friendly" }],
+  "ski-goggles":        [{ label: "Powder resorts", href: "/places?tags=powder" }],
+};
 
 const SKILL_OPTIONS: { label: string; value: SkillLevel }[] = [
   { label: "First timer",        value: "beginner" },
@@ -402,6 +413,24 @@ export default function EquipmentExplorer() {
                       </ul>
                     </div>
                   </details>
+                  {EQUIPMENT_PLACE_LINKS[item.id] && (
+                    <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "2px solid currentColor", opacity: 0.8 }}>
+                      <p style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.45, marginBottom: "0.35rem" }}>
+                        Places where this matters
+                      </p>
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                        {EQUIPMENT_PLACE_LINKS[item.id].map(link => (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            style={{ fontSize: "0.7rem", fontWeight: 700, textDecoration: "none", color: "inherit", opacity: 0.65 }}
+                          >
+                            See destinations →
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </article>
             ))}
