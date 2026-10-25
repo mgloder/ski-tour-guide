@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Nav from "@/components/nav";
 import ThemePanel from "@/components/theme-panel";
+import SWRegister from "@/components/sw-register";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </div>
 
         <ThemePanel />
+        <SWRegister />
       </body>
     </html>
   );

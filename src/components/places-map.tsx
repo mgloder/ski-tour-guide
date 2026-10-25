@@ -100,7 +100,8 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
   const [fullscreen, setFullscreen]                 = useState(false);
   const [difficultyFilter, setDifficultyFilter]     = useState<PisteDifficulty>("all");
   const [attributionVisible, setAttributionVisible] = useState(true);
-  const [showLabels, setShowLabels]                 = useState(true);  // Feature 2: label density
+  const [showLabels, setShowLabels]                 = useState(true);  // Feature 2: base map labels
+  const [resortLabels, setResortLabels]             = useState<"highlighted"|"big"|"all">("highlighted"); // Feature 2b: resort name density
   const [bearing, setBearing]                       = useState(0);     // Feature 5: bearing reset
   const containerRef               = useRef<HTMLDivElement>(null);
   const mapRef                     = useRef<any>(null);
@@ -141,6 +142,26 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
     if (!map || !mapReadyRef.current) return;
     applyLabelVisibility(map, showLabels);
   }, [showLabels]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function applyResortLabelFilter(map: any, mode: "highlighted" | "big" | "all") {
+    if (!map.getLayer("place-labels")) return;
+    if (mode === "highlighted") {
+      map.setFilter("place-labels", ["all", ["!", ["has", "point_count"]], ["boolean", ["get", "highlighted"], false]]);
+      map.setLayoutProperty("place-labels", "visibility", "visible");
+    } else if (mode === "big") {
+      map.setFilter("place-labels", ["all", ["!", ["has", "point_count"]], ["any", [">=", ["get", "km"], 100], ["boolean", ["get", "highlighted"], false]]]);
+      map.setLayoutProperty("place-labels", "visibility", "visible");
+    } else {
+      map.setFilter("place-labels", ["all", ["!", ["has", "point_count"]]]);
+      map.setLayoutProperty("place-labels", "visibility", "visible");
+    }
+  }
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current) return;
+    applyResortLabelFilter(map, resortLabels);
+  }, [resortLabels]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Feature 3: Keyboard navigation ───────────────────────────────────────
   useEffect(() => {
@@ -728,6 +749,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       }
       // Feature 2: re-apply label visibility after style reload
       applyLabelVisibility(map, showLabels);
+      applyResortLabelFilter(map, resortLabels);
       // Re-add piste overlay if selected; also reset difficulty filter
       setDifficultyFilter("all");
       if (selectedRef.current) applySelection(map, selectedRef.current);
@@ -970,7 +992,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
         >
           ©
         </button>
-        {/* Feature 2: Labels toggle */}
+        {/* Feature 2: Base map labels toggle */}
         <button
           onClick={() => setShowLabels(v => !v)}
           title={showLabels ? "Hide map labels" : "Show map labels"}
@@ -981,6 +1003,19 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           }}
         >
           Labels
+        </button>
+        {/* Feature 2b: Resort name density */}
+        <button
+          onClick={() => setResortLabels(m => m === "highlighted" ? "big" : m === "big" ? "all" : "highlighted")}
+          title={resortLabels === "highlighted" ? "Resort labels: active only — click for large resorts" : resortLabels === "big" ? "Resort labels: large (>100km) — click for all" : "Resort labels: all — click to reset"}
+          style={{
+            ...btnBase,
+            background: resortLabels === "all" ? "var(--bx-primary,#2b44ff)" : resortLabels === "big" ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.6)",
+            color: resortLabels === "all" ? "#fff" : "#111",
+            fontSize: "0.6rem",
+          }}
+        >
+          {resortLabels === "highlighted" ? "Aa·" : resortLabels === "big" ? "Aa" : "AA"}
         </button>
         {/* Feature 5: Bearing reset — only visible when rotated > 5° */}
         {Math.abs(bearing) > 5 && (

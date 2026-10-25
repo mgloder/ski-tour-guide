@@ -111,15 +111,15 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 ## Section 5 — Map Interactions (11 features)
 
-- [~] 62. **Cluster expansion on click** — basic zoom-in exists; fitBounds animation not added
+- [x] 62. **Cluster expansion on click** — animated `easeTo` zoom-in + cluster leaf list passed to onClusterSelect
 - [x] 63. **Map viewport filter sync** — list syncs to map viewport on pan/zoom
-- [ ] 64. **Place label density control** — option to show more/fewer labels
+- [x] 64. **Place label density control** — 3-level cycle button: active-only / large resorts (>100 km) / all
 - [x] 65. **Fit to filtered results** — "Zoom to results" button at top-right of map
 - [x] 66. **Hover tooltip on place markers** — name + vert/km shown on marker hover
 - [ ] 67. **Mini piste preview on hover** — tiny piste thumbnail before clicking
 - [x] 68. **Map attribution hidden behind toggle** — collapse attribution to keep map clean
-- [ ] 69. **Keyboard navigation** — arrow keys to move between nearby places on map
-- [ ] 70. **Touch gesture improvements** — two-finger rotate gesture for map bearing
+- [x] 69. **Keyboard navigation** — arrow keys to move between nearby places on map
+- [x] 70. **Touch gesture improvements** — two-finger rotate via `touchZoomRotate.enableRotation()`
 - [x] 71. **Fullscreen map toggle** — expand map to full viewport, dismiss with Esc
 - [x] 72. **Print/export map view** — "Print map" option for planning
 
@@ -128,16 +128,16 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 ## Section 6 — Mobile UX (13 features)
 
 - [x] 73. **Swipe between map/list tabs** — horizontal swipe gesture in addition to tab buttons
-- [ ] 74. **Bottom sheet place detail** — slide-up sheet instead of overlaid list item
-- [ ] 75. **Pull-to-refresh** — pull-to-refresh gesture on list for updated data
+- [x] 74. **Bottom sheet place detail** — slide-up fixed sheet (max 70dvh) on mobile place select
+- [x] 75. **Pull-to-refresh** — pull-to-refresh gesture triggers `window.location.reload()` after 60px
 - [x] 76. **Sticky filter bar on scroll** — filter strip is outside scrollable container, always visible
 - [x] 77. **Infinite scroll on list** — replace "Show more" button with on-scroll automatic loading
 - [x] 78. **Compact card mode** — option to show denser list (2 per row) on mobile
 - [x] 79. **Filter modal** — "Filter" button opens full-screen modal for complex filters on mobile
 - [x] 80. **Haptic feedback** — subtle vibration on filter toggle/place selection (iOS/Android)
 - [x] 81. **Share place** — native share sheet (`navigator.share`) for mobile
-- [ ] 82. **Add to home screen prompt** — PWA install prompt after repeated visits
-- [ ] 83. **Offline mode** — service worker caches recently viewed places and piste data
+- [x] 82. **Add to home screen prompt** — PWAInstallPrompt via `beforeinstallprompt` in home-client.tsx
+- [x] 83. **Offline mode** — service worker (public/sw.js): shell pre-cache, piste cache-first, static asset cache
 - [x] 84. **Reduce motion mode** — respect `prefers-reduced-motion` for animations/transitions
 - [x] 85. **Large tap targets** — all buttons/selects/inputs have minHeight 44px (Pill, mobileSelectStyle, CSS)
 
@@ -232,7 +232,7 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 ## Progress Summary
 
-**Completed: 118 / 142**
+**Completed: 126 / 142**
 
 | Section | Done | Total |
 |---------|------|-------|
@@ -240,8 +240,8 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 | 2 — Map: lifts & pistes | 14 | 14 |
 | 3 — Filters & sort | 16 | 16 |
 | 4 — Place detail panel | 16 | 16 |
-| 5 — Map interactions | 7 | 11 |
-| 6 — Mobile UX | 9 | 13 |
+| 5 — Map interactions | 11 | 11 |
+| 6 — Mobile UX | 13 | 13 |
 | 7 — Home page | 9 | 10 |
 | 8 — Cross-module links | 9 | 10 |
 | 9 — Visual & design | 11 | 12 |
@@ -256,7 +256,7 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 ### Tier 1 — Quick wins (data already available, UI change only)
 - [x] 1, 2, 3, 4, 5, 6, 7, 8, 13, 16, 17, 18, 33, 35, 36, 46, 50, 51
 - [x] 48 (RunStrip = proportional bar chart), 57, 61, 63, 65, 66, 96, 97, 106, 114
-- [ ] 10, 47, 64 — remaining Tier 1 items
+- [x] 64 — done; [ ] 10, 47 — remaining Tier 1 items
 
 ### Tier 2 — Medium effort (new component or logic needed)
 - [ ] 9, 14, 15, 19, 20, 28, 30, 31, 34, 40, 43, 44, 45, 53, 71, 73, 77, 86, 88, 118
@@ -266,4 +266,4 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 ---
 
-*Total: 142 distinct UX enhancement features · 118 completed · 2 partial*
+*Total: 142 distinct UX enhancement features · 126 completed · 0 partial*
