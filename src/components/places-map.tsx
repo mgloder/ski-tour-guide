@@ -39,40 +39,28 @@ function _haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): n
 
 /**
  * Remove piste/lift features that belong to neighbouring resorts.
- * Strategy: find the median centroid of all piste features (robust against outliers),
- * then keep only features within an adaptive radius scaled by resort size.
+ * Uses the resort's own coordinates as the anchor (stable, DB-sourced reference)
+ * with an adaptive radius scaled by total_km.  Min 12 km covers any single resort;
+ * neighbouring resorts are typically ≥15 km apart so they stay excluded.
+ * The median-centroid approach was abandoned: if the neighbour has more features
+ * the median shifts to them, filtering out the selected resort's own pistes.
  */
 function filterPistesByProximity(geojson: { type: "FeatureCollection"; features: any[] }, place: DbPlace): { type: "FeatureCollection"; features: any[] } {
-  const features = geojson.features;
-  const pistes = features.filter(f => f.properties?.kind === "piste");
-  if (pistes.length === 0) return geojson;
+  if (!place.latitude || !place.longitude) return geojson;
 
-  // Centroid of each piste feature
-  const centroids = pistes.map(f => {
-    const coords: [number, number][] = f.geometry.coordinates;
-    const lng = coords.reduce((s, c) => s + c[0], 0) / coords.length;
-    const lat = coords.reduce((s, c) => s + c[1], 0) / coords.length;
-    return { lat, lng };
-  });
-
-  // Median lat + lng (independent sort — robust against outliers)
-  const sortedByLat = [...centroids].sort((a, b) => a.lat - b.lat);
-  const sortedByLng = [...centroids].sort((a, b) => a.lng - b.lng);
-  const mid = Math.floor(centroids.length / 2);
-  const medLat = sortedByLat[mid].lat;
-  const medLng = sortedByLng[mid].lng;
-
-  // Adaptive radius: sqrt(km * 0.8), clamped to [6, 22] km
-  const km = place.total_km ?? 50;
-  const maxDistKm = Math.max(6, Math.min(22, Math.sqrt(km * 0.8)));
+  // Adaptive radius: max(12, min(25, sqrt(km * 1.5))) km
+  // 50 km → 12 km,  100 km → 12.2 km,  200 km → 17.3 km,  600 km → 25 km
+  const km = place.total_km ?? 0;
+  const maxDistKm = Math.max(12, Math.min(25, Math.sqrt(km * 1.5)));
 
   return {
     ...geojson,
-    features: features.filter(f => {
+    features: geojson.features.filter(f => {
       const coords: [number, number][] = f.geometry.coordinates;
+      if (!coords.length) return true;
       const lng = coords.reduce((s, c) => s + c[0], 0) / coords.length;
       const lat = coords.reduce((s, c) => s + c[1], 0) / coords.length;
-      return _haversineKm(medLat, medLng, lat, lng) <= maxDistKm;
+      return _haversineKm(place.latitude!, place.longitude!, lat, lng) <= maxDistKm;
     }),
   };
 }
@@ -389,7 +377,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
 
     // Check sessionStorage cache before fetching (#120)
     try {
-      const cached = sessionStorage.getItem("ski-piste-" + place.id);
+      const cached = sessionStorage.getItem("ski-piste-v2-" + place.id);
       if (cached) {
         const rawGeojson = JSON.parse(cached);
         const geojson = annotateLiftCategories(filterPistesByProximity(rawGeojson, place));
@@ -451,7 +439,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       // Filter neighbouring-resort features, then annotate lift categories
       const annotated = annotateLiftCategories(filterPistesByProximity(geojson, place));
       // Store cleaned data in sessionStorage cache (#120)
-      try { sessionStorage.setItem("ski-piste-" + place.id, JSON.stringify(annotated)); } catch { /* quota exceeded or private mode */ }
+      try { sessionStorage.setItem("ski-piste-v2-" + place.id, JSON.stringify(annotated)); } catch { /* quota exceeded or private mode */ }
       map.addSource("ski", { type: "geojson", data: annotated });
       // Feature 1: two lift sub-layers by category
       map.addLayer({ id: "lifts-short", type: "line", source: "ski",
