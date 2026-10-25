@@ -1443,7 +1443,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
       {/* ── LEFT: Map — always full height ── */}
       <div style={{ flex: "0 0 65%", position: "relative", borderRight: "3px solid currentColor", height: "100%" }}>
         <PlacesMap
-          places={places}
+          places={mapPlaces}
           highlightedIds={highlightedIds}
           selected={selected}
           onSelect={handleMapSelect}

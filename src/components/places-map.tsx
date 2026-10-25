@@ -553,22 +553,22 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       },
     });
 
-    // Cluster circles
+    // Cluster circles — size and count driven by hlCount (valid/filtered places only)
     map.addLayer({
       id: "clusters", type: "circle", source: "places",
-      filter: ["has", "point_count"],
+      filter: ["all", ["has", "point_count"], [">", ["get", "hlCount"], 0]],
       paint: {
-        "circle-radius": ["step", ["get", "point_count"], 14, 10, 20, 50, 26],
-        "circle-color": ["case", [">", ["get", "hlCount"], 0], "#2b44ff", "#9ca3af"],
-        "circle-opacity": ["case", [">", ["get", "hlCount"], 0], 0.85, 0.35],
+        "circle-radius": ["step", ["get", "hlCount"], 14, 10, 20, 50, 26],
+        "circle-color": "#2b44ff",
+        "circle-opacity": 0.85,
         "circle-stroke-color": "#000", "circle-stroke-width": 2,
       },
     });
     map.addLayer({
       id: "cluster-count", type: "symbol", source: "places",
-      filter: ["has", "point_count"],
-      layout: { "text-field": "{point_count_abbreviated}", "text-size": 10 },
-      paint: { "text-color": ["case", [">", ["get", "hlCount"], 0], "#fff", "#000"] },
+      filter: ["all", ["has", "point_count"], [">", ["get", "hlCount"], 0]],
+      layout: { "text-field": ["to-string", ["get", "hlCount"]], "text-size": 10 },
+      paint: { "text-color": "#fff" },
     });
 
     // Individual points — circle-radius scales by km (#112)
