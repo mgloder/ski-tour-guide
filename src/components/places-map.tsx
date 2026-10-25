@@ -259,7 +259,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       map.getCanvas().style.cursor = "crosshair";
       const feat = e.features?.[0];
       if (!feat) return;
-      const featId = feat.id ?? feat.properties?.id;
+      const featId = feat.id ?? feat.properties?.id ?? null;
       hoveredPisteIdRef.current = featId;
 
       const difficulty: string = feat.properties?.difficulty ?? "";
@@ -273,6 +273,9 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
 
       // Remove any existing hover layer
       if (map.getLayer("pistes-hover")) map.removeLayer("pistes-hover");
+
+      // Skip hover layer if we have no valid feature id to filter on
+      if (featId === null) return;
 
       map.addLayer({
         id: "pistes-hover",
@@ -296,26 +299,28 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
     map.on("mousemove", "pistes", (e: any) => {
       const feat = e.features?.[0];
       if (!feat) return;
-      const featId = feat.id ?? feat.properties?.id;
+      const featId = feat.id ?? feat.properties?.id ?? null;
 
       if (featId !== hoveredPisteIdRef.current) {
         hoveredPisteIdRef.current = featId;
-        const difficulty: string = feat.properties?.difficulty ?? "";
-        const colorMap: Record<string, string> = {
-          novice: "#166534", easy: "#166534",
-          intermediate: "#1e40af",
-          advanced: "#991b1b",
-          expert: "#18181b", freeride: "#18181b",
-        };
-        const glowColor = colorMap[difficulty] ?? "#6b7280";
         if (map.getLayer("pistes-hover")) map.removeLayer("pistes-hover");
-        map.addLayer({
-          id: "pistes-hover",
-          type: "line",
-          source: "ski",
-          filter: ["==", ["id"], featId],
-          paint: { "line-width": 6, "line-color": glowColor, "line-opacity": 0.5, "line-blur": 2 },
-        });
+        if (featId !== null) {
+          const difficulty: string = feat.properties?.difficulty ?? "";
+          const colorMap: Record<string, string> = {
+            novice: "#166534", easy: "#166534",
+            intermediate: "#1e40af",
+            advanced: "#991b1b",
+            expert: "#18181b", freeride: "#18181b",
+          };
+          const glowColor = colorMap[difficulty] ?? "#6b7280";
+          map.addLayer({
+            id: "pistes-hover",
+            type: "line",
+            source: "ski",
+            filter: ["==", ["id"], featId],
+            paint: { "line-width": 6, "line-color": glowColor, "line-opacity": 0.5, "line-blur": 2 },
+          });
+        }
       }
       setLineHover(prev => prev ? { ...prev, x: e.originalEvent.clientX, y: e.originalEvent.clientY } : null);
     });
