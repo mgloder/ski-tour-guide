@@ -645,7 +645,8 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   const touchStartY = useRef<number>(0);
 
   // Feature #74: bottom sheet
-  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
+  const [bottomSheetOpen,    setBottomSheetOpen]    = useState(false);
+  const [bottomSheetExpanded, setBottomSheetExpanded] = useState(false);
 
   // Feature #75: pull-to-refresh
   const pullStartY = useRef(0);
@@ -847,9 +848,9 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
       if (next) {
         trackRecent(place.id);
         setRecentIds(r => [place.id, ...r.filter(id => id !== place.id)].slice(0, 8));
-        if (isMobile) setBottomSheetOpen(true);
+        if (isMobile) { setBottomSheetOpen(true); setBottomSheetExpanded(false); }
       } else {
-        setBottomSheetOpen(false);
+        setBottomSheetOpen(false); setBottomSheetExpanded(false);
       }
       return next;
     });
@@ -860,8 +861,9 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     trackRecent(place.id);
     setRecentIds(r => [place.id, ...r.filter(id => id !== place.id)].slice(0, 8));
     if (isMobile) {
-      setMobileTab("list");
+      // Stay on the map tab so the piste overlay remains visible
       setBottomSheetOpen(true);
+      setBottomSheetExpanded(false);
     }
   }
 
@@ -1262,11 +1264,10 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           ))}
         </div>
 
-        {mobileTab === "map" && (
-          <div style={{ flex: 1, position: "relative", minHeight: 0, overflow: "hidden" }}>
-            <PlacesMap places={mapPlaces} highlightedIds={highlightedIds} selected={selected} onSelect={handleMapSelect} onClusterSelect={handleClusterSelect} onBoundsChange={setMapVisibleIds} />
-          </div>
-        )}
+        {/* Map always mounted so piste overlay persists when switching tabs */}
+        <div style={{ flex: mobileTab === "map" ? 1 : 0, position: "relative", minHeight: 0, overflow: "hidden", display: mobileTab === "map" ? undefined : "none" }}>
+          <PlacesMap places={mapPlaces} highlightedIds={highlightedIds} selected={selected} onSelect={handleMapSelect} onClusterSelect={handleClusterSelect} onBoundsChange={setMapVisibleIds} />
+        </div>
 
         {mobileTab === "list" && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -1410,20 +1411,74 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           </div>
         )}
 
-        {/* Bottom sheet overlay (#74) */}
+        {/* Bottom sheet (#74) — compact peek on map tab, expandable for detail */}
         {isMobile && selected && bottomSheetOpen && (
           <div
-            style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, background: "var(--bx-paper,#fff)", color: "var(--bx-ink,#111)", borderTop: "3px solid currentColor", maxHeight: "70dvh", overflowY: "auto", padding: "1rem", transition: "transform 0.25s ease", transform: bottomSheetOpen ? "translateY(0)" : "translateY(100%)" }}
+            style={{
+              position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300,
+              background: "var(--bx-paper,#fff)", color: "var(--bx-ink,#111)",
+              borderTop: "3px solid currentColor",
+              maxHeight: bottomSheetExpanded ? "72dvh" : "52dvh",
+              overflowY: "auto",
+              transition: "max-height 0.28s ease",
+            }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-              <div>
-                <p style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.5 }}>{selected.country} · {selected.region}</p>
-                <p style={{ fontWeight: 900, fontSize: "1.05rem" }}>{selected.name}</p>
-              </div>
-              <button onClick={() => { setBottomSheetOpen(false); setSelected(null); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", opacity: 0.4, lineHeight: 1 }}>×</button>
+            {/* Drag handle */}
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: "0.5rem", paddingBottom: "0.25rem" }}>
+              <div style={{ width: "2.5rem", height: "4px", borderRadius: "2px", background: "currentColor", opacity: 0.18 }} />
             </div>
-            {renderDetail(selected)}
+
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "0 1rem 0.4rem" }}>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.07em", opacity: 0.45, marginBottom: "0.1rem" }}>
+                  {[selected.country, selected.region].filter(Boolean).join(" · ")}
+                </p>
+                <p style={{ fontWeight: 900, fontSize: "1.1rem", lineHeight: 1.2 }}>{selected.name}</p>
+              </div>
+              <button
+                onClick={() => { setBottomSheetOpen(false); setBottomSheetExpanded(false); setSelected(null); }}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.4rem", opacity: 0.35, lineHeight: 1, flexShrink: 0, padding: "0 0 0 0.5rem", marginTop: "0.1rem" }}
+                aria-label="Close"
+              >×</button>
+            </div>
+
+            {/* Stats */}
+            <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", padding: "0 1rem 0.4rem" }}>
+              {(selected.total_km     ?? 0) > 0 && <span style={{ fontSize: "0.7rem", fontWeight: 900 }}>{selected.total_km} km</span>}
+              {(selected.altitude_peak ?? 0) > 0 && <span style={{ fontSize: "0.7rem", opacity: 0.6 }}>{selected.altitude_base}–{selected.altitude_peak} m</span>}
+              {(selected.vertical_drop ?? 0) > 0 && <span style={{ fontSize: "0.7rem", opacity: 0.6 }}>{selected.vertical_drop} m vert</span>}
+              {(selected.lifts_count  ?? 0) > 0 && <span style={{ fontSize: "0.7rem", opacity: 0.6 }}>{selected.lifts_count} lifts</span>}
+            </div>
+
+            {/* Run strip */}
+            <div style={{ padding: "0 1rem 0.5rem" }}>
+              <RunStrip place={selected} />
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: "flex", gap: "0.5rem", padding: "0 1rem 0.9rem" }}>
+              <button
+                onClick={() => { setMobileTab("map"); setBottomSheetOpen(false); setBottomSheetExpanded(false); }}
+                style={{ flex: 1, height: "44px", border: "2px solid currentColor", background: "transparent", cursor: "pointer", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}
+              >
+                ↑ Piste map
+              </button>
+              <button
+                onClick={() => setBottomSheetExpanded(v => !v)}
+                style={{ flex: 1, height: "44px", border: "2px solid currentColor", background: "currentColor", color: "var(--bx-paper,#fff)", cursor: "pointer", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em" }}
+              >
+                {bottomSheetExpanded ? "← Less" : "Details →"}
+              </button>
+            </div>
+
+            {/* Expanded detail */}
+            {bottomSheetExpanded && (
+              <div style={{ padding: "0 1rem 1.5rem", borderTop: "1px solid currentColor" }}>
+                {renderDetail(selected)}
+              </div>
+            )}
           </div>
         )}
 
