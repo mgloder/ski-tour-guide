@@ -231,6 +231,65 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
     if (!place.latitude || !place.longitude) return;
     map.flyTo({ center: [place.longitude, place.latitude], zoom: 10, duration: 800 });
 
+    // Check sessionStorage cache before fetching (#120)
+    try {
+      const cached = sessionStorage.getItem("ski-piste-" + place.id);
+      if (cached) {
+        const geojson = JSON.parse(cached);
+        setPisteLoading(false);
+        if (!mapRef.current || map.getSource("ski")) return;
+        map.addSource("ski", { type: "geojson", data: geojson });
+        map.addLayer({ id: "lifts", type: "line", source: "ski",
+          filter: ["==", ["get", "kind"], "lift"],
+          layout: { visibility: layerVisRef.current.lifts ? "visible" : "none" },
+          paint: { "line-color": "#9ca3af", "line-width": 1.5, "line-dasharray": [3, 2] } });
+        map.addLayer({ id: "pistes", type: "line", source: "ski",
+          filter: ["==", ["get", "kind"], "piste"],
+          layout: { visibility: layerVisRef.current.pistes ? "visible" : "none" },
+          paint: {
+            "line-color": ["match", ["get", "difficulty"],
+              "novice","#166534","easy","#166534","intermediate","#1e40af",
+              "advanced","#991b1b","expert","#18181b","freeride","#18181b","#6b7280"],
+            "line-width": 2, "line-opacity": 0.9,
+          } });
+        setPisteLoaded(true);
+        addPisteHoverListeners(map);
+        map.on("mouseenter", "lifts", (e: any) => {
+          map.getCanvas().style.cursor = "crosshair";
+          const feat = e.features?.[0];
+          if (!feat) return;
+          const name = feat.properties?.name || feat.properties?.ref || "";
+          const kind = feat.properties?.kind || "lift";
+          if (name) setLineHover({ name, kind, x: e.originalEvent.clientX, y: e.originalEvent.clientY });
+        });
+        map.on("mousemove", "lifts", (e: any) => {
+          setLineHover(prev => prev ? { ...prev, x: e.originalEvent.clientX, y: e.originalEvent.clientY } : null);
+        });
+        map.on("mouseleave", "lifts", () => {
+          map.getCanvas().style.cursor = "";
+          setLineHover(null);
+        });
+        const coords = geojson.features
+          .filter((f: any) => f.properties.kind === "piste")
+          .flatMap((f: any) => f.geometry.coordinates as [number, number][]);
+        if (coords.length) {
+          let mnLng = coords[0][0], mxLng = coords[0][0];
+          let mnLat = coords[0][1], mxLat = coords[0][1];
+          for (const [lng, lat] of coords) {
+            if (lng < mnLng) mnLng = lng;
+            if (lng > mxLng) mxLng = lng;
+            if (lat < mnLat) mnLat = lat;
+            if (lat > mxLat) mxLat = lat;
+          }
+          const cam = map.cameraForBounds([[mnLng, mnLat], [mxLng, mxLat]], { padding: 40, maxZoom: 14 });
+          if (cam && (cam.zoom as number) >= 9) {
+            map.easeTo({ ...cam, duration: 600 });
+          }
+        }
+        return;
+      }
+    } catch { /* sessionStorage unavailable or parse error — fall through to fetch */ }
+
     const abort = new AbortController();
     pisteAbortRef.current = abort;
     const timeoutId = setTimeout(() => abort.abort(), 40_000);
@@ -241,6 +300,8 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       if (abort.signal.aborted) return;
       setPisteLoading(false);
       if (!mapRef.current || map.getSource("ski")) return;
+      // Store in sessionStorage cache (#120)
+      try { sessionStorage.setItem("ski-piste-" + place.id, JSON.stringify(geojson)); } catch { /* quota exceeded or private mode */ }
       map.addSource("ski", { type: "geojson", data: geojson });
       map.addLayer({ id: "lifts", type: "line", source: "ski",
         filter: ["==", ["get", "kind"], "lift"],

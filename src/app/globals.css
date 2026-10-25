@@ -87,3 +87,42 @@ details summary::-webkit-details-marker {
     display: none !important;
   }
 }
+
+/* ── Focus ring improvements (#117) ──────────────────────────────────────── */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--bx-primary, #2b44ff);
+  outline-offset: 2px;
+}
+
+/* Dark backgrounds (selected items, map overlays) */
+.bx-primary-bg *:focus-visible,
+[style*="background: var(--bx-primary"] *:focus-visible {
+  outline-color: #fff;
+}
+
+/* ── Smooth filter transitions (#111) ─────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .place-list-item {
+    transition: opacity 0.15s ease, background 0.15s ease;
+  }
+}
+
+/* ── Responsive typography (#115) ──────────────────────────────────────── */
+@media (max-width: 375px) {
+  .bx-display-1 {
+    font-size: clamp(1.8rem, 8vw, 2.5rem) !important;
+  }
+  .bx-lead {
+    font-size: clamp(0.85rem, 3.5vw, 1rem) !important;
+  }
+}
+
+@media (min-width: 1400px) {
+  .bx-display-1 {
+    font-size: 4rem !important;
+  }
+}

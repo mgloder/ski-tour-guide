@@ -11,6 +11,17 @@ import { useIsMobile } from "@/lib/use-is-mobile";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+// Feature B: Country groups
+const COUNTRY_GROUPS: Record<string, string[]> = {
+  "Alps":          ["Austria", "Switzerland", "France", "Italy", "Germany", "Liechtenstein", "Slovenia"],
+  "Scandinavia":   ["Norway", "Sweden", "Finland"],
+  "North America": ["United States", "Canada"],
+  "Japan":         ["Japan"],
+  "Other":         [],
+};
+
+const ALL_GROUPED_COUNTRIES = Object.values(COUNTRY_GROUPS).flat();
+
 const LEVEL_OPTIONS = [
   { value: null as string | null, label: "Any level",     hint: "" },
   { value: "beginner",     label: "First timer",  hint: "green runs · learning zones", tags: ["beginner-friendly"] },
@@ -71,6 +82,11 @@ const SK_TRIP      = "ski-trip-v1";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Feature E: Haptic feedback
+function haptic(pattern: number | number[] = 10) {
+  try { if ("vibrate" in navigator) navigator.vibrate(pattern); } catch {}
+}
+
 function getSeasonStatus(bestMonths: string[]): "in-season" | "off-season" | null {
   if (!bestMonths?.length) return null;
   const current = MONTH_ABBR[new Date().getMonth()];
@@ -88,20 +104,22 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 function filterPlaces(
   places: DbPlace[],
   level: string | null,
-  terrain: string | null,
+  terrain: string[],
   query: string,
   country: string | null,
   size: string | null,
   vert: string | null,
   month: string | null,
+  regionFilter: string | null,
 ) {
-  const levelTags   = LEVEL_OPTIONS.find(o => o.value === level)?.tags   ?? [];
-  const terrainTags = TERRAIN_OPTIONS.find(o => o.value === terrain)?.tags ?? [];
+  const levelTags = LEVEL_OPTIONS.find(o => o.value === level)?.tags ?? [];
+  // Feature A: collect tags for all selected terrains; place must satisfy ALL selected terrains
+  const terrainTagSets = terrain.map(t => TERRAIN_OPTIONS.find(o => o.value === t)?.tags ?? []);
   const q = query.trim().toLowerCase();
   return places.filter(p => {
     const t = new Set(p.tags);
-    if (levelTags.length   && !levelTags.some(x => t.has(x)))   return false;
-    if (terrainTags.length && !terrainTags.some(x => t.has(x))) return false;
+    if (levelTags.length && !levelTags.some(x => t.has(x))) return false;
+    if (terrainTagSets.length > 0 && !terrainTagSets.every(tags => tags.some(x => new Set(p.tags).has(x)))) return false;
     if (q) {
       const inName      = p.name.toLowerCase().includes(q);
       const inCountry   = (p.country ?? "").toLowerCase().includes(q);
@@ -110,6 +128,15 @@ function filterPlaces(
       if (!inName && !inCountry && !inHighlight && !inDesc) return false;
     }
     if (country && p.country !== country) return false;
+    // Feature B: region filter
+    if (regionFilter) {
+      const groupCountries = COUNTRY_GROUPS[regionFilter];
+      if (regionFilter === "Other") {
+        if (ALL_GROUPED_COUNTRIES.includes(p.country)) return false;
+      } else if (groupCountries && groupCountries.length > 0 && !groupCountries.includes(p.country)) {
+        return false;
+      }
+    }
     if (size) {
       const km = p.total_km ?? 0;
       if (size === "S"  && !(km > 0  && km < 50))   return false;
@@ -278,6 +305,11 @@ function RunStrip({ place }: { place: DbPlace }) {
           </div>
         ))}
       </div>
+      {(place.vertical_drop ?? 0) > 0 && (
+        <div style={{ fontSize: "0.5rem", textAlign: "center", opacity: 0.4, paddingTop: "0.15rem", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+          ↕ {place.vertical_drop}m vert
+        </div>
+      )}
     </div>
   );
 }
@@ -444,30 +476,51 @@ function TripOverlay({ tripIds, places, onClose, onRemove }: TripOverlayProps) {
   );
 }
 
+// ── Skeleton loading (Feature J) — defined outside main component ─────────────
+
+function SkeletonCard() {
+  return (
+    <div style={{ padding: "0.875rem 1rem", borderBottom: "2px solid currentColor", opacity: 0.5 }}>
+      <div style={{ height: "0.6rem", background: "currentColor", width: "30%", marginBottom: "0.5rem", opacity: 0.2 }} />
+      <div style={{ height: "0.95rem", background: "currentColor", width: "70%", marginBottom: "0.35rem", opacity: 0.3 }} />
+      <div style={{ height: "0.6rem", background: "currentColor", width: "50%", opacity: 0.15 }} />
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   const isMobile = useIsMobile();
-  const [mobileTab,     setMobileTab]     = useState<"map" | "list">("map");
-  const [level,         setLevel]         = useState<string | null>(null);
-  const [terrain,       setTerrain]       = useState<string | null>(null);
-  const [country,       setCountry]       = useState<string | null>(null);
-  const [size,          setSize]          = useState<string | null>(null);
-  const [vert,          setVert]          = useState<string | null>(null);
-  const [month,         setMonth]         = useState<string | null>(null);
-  const [sortBy,        setSortBy]        = useState("size");
-  const [selected,      setSelected]      = useState<DbPlace | null>(null);
-  const [query,         setQuery]         = useState("");
-  const [visible,       setVisible]       = useState(PAGE);
-  const [clusterIds,    setClusterIds]    = useState<string[] | null>(null);
-  const [mapVisibleIds, setMapVisibleIds] = useState<string[] | null>(null);
-  const [favorites,     setFavorites]     = useState<Set<string>>(new Set());
-  const [recentIds,     setRecentIds]     = useState<string[]>([]);
-  const [userCoords,    setUserCoords]    = useState<{ lat: number; lng: number } | null>(null);
-  const [geoLoading,    setGeoLoading]    = useState(false);
-  const [copied,        setCopied]        = useState<"coords"|"url"|null>(null);
-  const [showFavsOnly,  setShowFavsOnly]  = useState(false);
-  const [filtersOpen,   setFiltersOpen]   = useState(false);
+  const [mobileTab,        setMobileTab]        = useState<"map" | "list">("map");
+  const [level,            setLevel]            = useState<string | null>(null);
+  // Feature A: terrain is now string[]
+  const [terrain,          setTerrain]          = useState<string[]>([]);
+  const [country,          setCountry]          = useState<string | null>(null);
+  const [size,             setSize]             = useState<string | null>(null);
+  const [vert,             setVert]             = useState<string | null>(null);
+  const [month,            setMonth]            = useState<string | null>(null);
+  const [sortBy,           setSortBy]           = useState("size");
+  const [selected,         setSelected]         = useState<DbPlace | null>(null);
+  const [query,            setQuery]            = useState("");
+  const [visible,          setVisible]          = useState(PAGE);
+  const [clusterIds,       setClusterIds]       = useState<string[] | null>(null);
+  const [mapVisibleIds,    setMapVisibleIds]     = useState<string[] | null>(null);
+  const [favorites,        setFavorites]        = useState<Set<string>>(new Set());
+  const [recentIds,        setRecentIds]        = useState<string[]>([]);
+  const [userCoords,       setUserCoords]       = useState<{ lat: number; lng: number } | null>(null);
+  const [geoLoading,       setGeoLoading]       = useState(false);
+  const [copied,           setCopied]           = useState<"coords"|"url"|null>(null);
+  const [showFavsOnly,     setShowFavsOnly]     = useState(false);
+  const [filtersOpen,      setFiltersOpen]      = useState(false);
+  // Feature B: region filter
+  const [regionFilter,     setRegionFilter]     = useState<string | null>(null);
+  // Feature C: mobile filter modal
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  // Feature F: reduce motion
+  const [reduceMotion,     setReduceMotion]     = useState(false);
+  // Feature J: skeleton loading
+  const [mounted,          setMounted]          = useState(false);
 
   // Feature states
   const [showQuiz,      setShowQuiz]      = useState(false);
@@ -477,6 +530,12 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   const [showTrip,      setShowTrip]      = useState(false);
   const [compactCards,  setCompactCards]  = useState(false);
   const [placeWeather,  setPlaceWeather]  = useState<Record<string, { temp: number; wind: number; snow: number; desc: string } | "loading" | "error">>({});
+  const [showCorrectionForm, setShowCorrectionForm] = useState<string | null>(null);
+  const [correctionText,     setCorrectionText]     = useState("");
+
+  // Feature D: swipe refs
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
 
   const listRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -488,6 +547,15 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
 
   // ── Persist: load on mount ───────────────────────────────────────────────
   useEffect(() => {
+    // Feature J: mark mounted
+    setMounted(true);
+
+    // Feature F: reduce motion
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduceMotion(mq.matches);
+    const mqHandler = (e: MediaQueryListEvent) => setReduceMotion(e.matches);
+    mq.addEventListener("change", mqHandler);
+
     try {
       const f: string[] = JSON.parse(localStorage.getItem(SK_FAVORITES) || "[]");
       setFavorites(new Set(f));
@@ -504,47 +572,54 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     const params = new URLSearchParams(window.location.search);
     if (params.toString()) {
       if (params.get("level"))   setLevel(params.get("level"));
-      if (params.get("terrain")) setTerrain(params.get("terrain"));
+      if (params.get("terrain")) setTerrain(params.get("terrain")!.split(",").filter(Boolean));
       if (params.get("country")) setCountry(params.get("country"));
       if (params.get("size"))    setSize(params.get("size"));
       if (params.get("vert"))    setVert(params.get("vert"));
       if (params.get("q"))       setQuery(params.get("q")!);
       if (params.get("month"))   setMonth(params.get("month"));
       if (params.get("sort"))    setSortBy(params.get("sort")!);
+      if (params.get("region"))  setRegionFilter(params.get("region"));
     } else {
       try {
         const s = JSON.parse(localStorage.getItem(SK_FILTERS) || "{}");
         if (s.level)   setLevel(s.level);
-        if (s.terrain) setTerrain(s.terrain);
+        if (s.terrain) setTerrain(Array.isArray(s.terrain) ? s.terrain : []);
         if (s.size)    setSize(s.size);
         if (s.vert)    setVert(s.vert);
         if (s.sortBy && s.sortBy !== "size") setSortBy(s.sortBy);
+        if (s.regionFilter) setRegionFilter(s.regionFilter);
       } catch {}
     }
+
+    return () => {
+      mq.removeEventListener("change", mqHandler);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Persist: sync to URL + localStorage on filter change ────────────────
   useEffect(() => {
     const params = new URLSearchParams();
-    if (level)             params.set("level",   level);
-    if (terrain)           params.set("terrain", terrain);
-    if (country)           params.set("country", country);
-    if (size)              params.set("size",    size);
-    if (vert)              params.set("vert",    vert);
-    if (query)             params.set("q",       query);
-    if (month)             params.set("month",   month);
-    if (sortBy !== "size") params.set("sort",    sortBy);
+    if (level)              params.set("level",   level);
+    if (terrain.length > 0) params.set("terrain", terrain.join(","));
+    if (country)            params.set("country", country);
+    if (size)               params.set("size",    size);
+    if (vert)               params.set("vert",    vert);
+    if (query)              params.set("q",       query);
+    if (month)              params.set("month",   month);
+    if (sortBy !== "size")  params.set("sort",    sortBy);
+    if (regionFilter)       params.set("region",  regionFilter);
     const str = params.toString();
     window.history.replaceState(null, "", str ? `?${str}` : window.location.pathname);
     try {
-      localStorage.setItem(SK_FILTERS, JSON.stringify({ level, terrain, size, vert, sortBy }));
+      localStorage.setItem(SK_FILTERS, JSON.stringify({ level, terrain, size, vert, sortBy, regionFilter }));
     } catch {}
-  }, [level, terrain, country, size, vert, query, month, sortBy]);
+  }, [level, terrain, country, size, vert, query, month, sortBy, regionFilter]);
 
   // ── Data pipeline ─────────────────────────────────────────────────────────
   const filtered = useMemo(
-    () => filterPlaces(places, level, terrain, query, country, size, vert, month),
-    [places, level, terrain, query, country, size, vert, month],
+    () => filterPlaces(places, level, terrain, query, country, size, vert, month, regionFilter),
+    [places, level, terrain, query, country, size, vert, month, regionFilter],
   );
   const sorted = useMemo(
     () => sortPlaces(filtered, sortBy, userCoords),
@@ -572,17 +647,17 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     [recentIds, places],
   );
 
-  const activeFilterCount = [level, terrain, country, size, vert, query, month].filter(Boolean).length;
+  const activeFilterCount = [level, country, size, vert, query, month].filter(Boolean).length + terrain.length;
 
-  const chips = [
-    level   && { key: "level",   label: LEVEL_OPTIONS.find(o => o.value === level)?.label ?? level,       clear: () => reset({ level: null }) },
-    terrain && { key: "terrain", label: TERRAIN_OPTIONS.find(o => o.value === terrain)?.label ?? terrain,  clear: () => reset({ terrain: null }) },
-    country && { key: "country", label: country,                                                            clear: () => reset({ country: null }) },
-    size    && { key: "size",    label: SIZE_OPTIONS.find(o => o.value === size)?.label ?? size,            clear: () => reset({ size: null }) },
-    vert    && { key: "vert",    label: `Vert ${VERT_OPTIONS.find(o => o.value === vert)?.hint ?? vert}`,  clear: () => reset({ vert: null }) },
-    month   && { key: "month",   label: month,                                                              clear: () => reset({ month: null }) },
-    query   && { key: "query",   label: `"${query}"`,                                                       clear: () => reset({ query: "" }) },
-  ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
+  const chips: { key: string; label: string; clear: () => void }[] = [
+    ...(level   ? [{ key: "level",   label: LEVEL_OPTIONS.find(o => o.value === level)?.label ?? level,       clear: () => reset({ level: null }) }] : []),
+    ...terrain.map(t => ({ key: `terrain-${t}`, label: TERRAIN_OPTIONS.find(o => o.value === t)?.label ?? t, clear: () => setTerrain(prev => prev.filter(x => x !== t)) })),
+    ...(country ? [{ key: "country", label: country,                                                            clear: () => reset({ country: null }) }] : []),
+    ...(size    ? [{ key: "size",    label: SIZE_OPTIONS.find(o => o.value === size)?.label ?? size,            clear: () => reset({ size: null }) }] : []),
+    ...(vert    ? [{ key: "vert",    label: `Vert ${VERT_OPTIONS.find(o => o.value === vert)?.hint ?? vert}`,  clear: () => reset({ vert: null }) }] : []),
+    ...(month   ? [{ key: "month",   label: month,                                                              clear: () => reset({ month: null }) }] : []),
+    ...(query   ? [{ key: "query",   label: `"${query}"`,                                                       clear: () => reset({ query: "" }) }] : []),
+  ];
 
   // ── Infinite scroll sentinel ──────────────────────────────────────────────
   useEffect(() => {
@@ -620,9 +695,8 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   }, [selected, fetchWeather]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  function reset(patch: Partial<{ level: string|null; terrain: string|null; country: string|null; size: string|null; vert: string|null; query: string; month: string|null }>) {
+  function reset(patch: Partial<{ level: string|null; country: string|null; size: string|null; vert: string|null; query: string; month: string|null }>) {
     if ("level"   in patch) setLevel(patch.level!);
-    if ("terrain" in patch) setTerrain(patch.terrain!);
     if ("country" in patch) setCountry(patch.country!);
     if ("size"    in patch) setSize(patch.size!);
     if ("vert"    in patch) setVert(patch.vert!);
@@ -631,8 +705,14 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     setSelected(null); setClusterIds(null); setVisible(PAGE);
   }
 
+  function toggleTerrain(value: string | null) {
+    if (value === null) { setTerrain([]); }
+    else { setTerrain(prev => prev.includes(value) ? prev.filter(x => x !== value) : [...prev, value]); }
+    setSelected(null); setClusterIds(null); setVisible(PAGE);
+  }
+
   function clearAll() {
-    setLevel(null); setTerrain(null); setCountry(null); setSize(null); setVert(null); setQuery(""); setMonth(null);
+    setLevel(null); setTerrain([]); setCountry(null); setSize(null); setVert(null); setQuery(""); setMonth(null); setRegionFilter(null);
     setSelected(null); setClusterIds(null); setVisible(PAGE);
   }
 
@@ -655,7 +735,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   function clearCluster() { setClusterIds(null); setSelected(null); setVisible(PAGE); }
 
   function applyPreset(p: typeof FILTER_PRESETS[0]) {
-    setLevel(p.level); setTerrain(p.terrain); setSize(p.size); setVert(p.vert);
+    setLevel(p.level); setTerrain(p.terrain ? [p.terrain] : []); setSize(p.size); setVert(p.vert);
     setSelected(null); setClusterIds(null); setVisible(PAGE);
   }
 
@@ -838,6 +918,37 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
             </div>
           </div>
         )}
+
+        {showCorrectionForm === place.id ? (
+          <div style={{ marginTop: "0.75rem" }}>
+            <textarea
+              value={correctionText}
+              onChange={e => setCorrectionText(e.target.value)}
+              placeholder="Describe the issue (wrong coordinates, name, etc.)"
+              style={{ width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.5)", color: "#fff", padding: "0.4rem", fontSize: "0.7rem", fontFamily: "inherit", resize: "vertical", minHeight: "60px", boxSizing: "border-box" }}
+            />
+            <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.3rem" }}>
+              <button
+                onClick={async () => {
+                  if (!correctionText.trim()) return;
+                  await fetch("/api/corrections", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ placeId: place.id, message: correctionText }) });
+                  setCorrectionText("");
+                  setShowCorrectionForm(null);
+                }}
+                style={{ border: "1px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", padding: "0.3rem 0.6rem", fontSize: "0.6rem", fontWeight: 700, cursor: "pointer" }}
+              >
+                Submit
+              </button>
+              <button onClick={() => setShowCorrectionForm(null)} style={{ border: "none", background: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: "0.6rem" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setShowCorrectionForm(place.id)} style={{ marginTop: "0.5rem", background: "none", border: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontSize: "0.55rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: 0 }}>
+            Report error
+          </button>
+        )}
       </div>
     );
   }
@@ -993,10 +1104,9 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
               <input type="search" placeholder="Search…" value={query} onChange={e => reset({ query: e.target.value })} style={{ height: "44px", border: "2px solid currentColor", background: "transparent", color: "inherit", padding: "0 0.6rem", fontSize: "0.8rem", fontFamily: "inherit", outline: "none", flexShrink: 0, width: "120px" }} />
 
               {[
-                { id: "level",   value: level,   setter: (v: string|null) => reset({ level: v }),   options: LEVEL_OPTIONS,   placeholder: "Level"   },
-                { id: "terrain", value: terrain, setter: (v: string|null) => reset({ terrain: v }), options: TERRAIN_OPTIONS, placeholder: "Terrain" },
-                { id: "size",    value: size,    setter: (v: string|null) => reset({ size: v }),    options: SIZE_OPTIONS,    placeholder: "Size"    },
-                { id: "vert",    value: vert,    setter: (v: string|null) => reset({ vert: v }),    options: VERT_OPTIONS,    placeholder: "Vert"    },
+                { id: "level", value: level, setter: (v: string|null) => reset({ level: v }), options: LEVEL_OPTIONS, placeholder: "Level" },
+                { id: "size",  value: size,  setter: (v: string|null) => reset({ size: v }),  options: SIZE_OPTIONS,  placeholder: "Size"  },
+                { id: "vert",  value: vert,  setter: (v: string|null) => reset({ vert: v }),  options: VERT_OPTIONS,  placeholder: "Vert"  },
               ].map(({ id, value, setter, options, placeholder }) => (
                 <div key={id} style={{ position: "relative", flexShrink: 0 }}>
                   <select value={value ?? ""} onChange={e => setter(e.target.value || null)} style={mobileSelectStyle}>
@@ -1007,6 +1117,16 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
                   <span style={{ position: "absolute", right: "0.35rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.55rem", opacity: 0.5 }}>▼</span>
                 </div>
               ))}
+
+              {/* Terrain: add-one-at-a-time select */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <select value="" onChange={e => { if (e.target.value) toggleTerrain(e.target.value); }} style={mobileSelectStyle}>
+                  <option value="">Terrain{terrain.length > 0 ? ` · ${terrain.length}` : ""}</option>
+                  {TERRAIN_OPTIONS.filter(o => o.value).map(o => <option key={String(o.value)} value={String(o.value)}>{terrain.includes(o.value!) ? "✓ " : ""}{o.label}</option>)}
+                </select>
+                {terrain.length > 0 && <span style={{ position: "absolute", top: "-4px", right: "-4px", width: "8px", height: "8px", borderRadius: "50%", background: "var(--bx-primary,#2b44ff)" }} />}
+                <span style={{ position: "absolute", right: "0.35rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: "0.55rem", opacity: 0.5 }}>▼</span>
+              </div>
 
               {/* Month */}
               <div style={{ position: "relative", flexShrink: 0 }}>
@@ -1195,7 +1315,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
             {/* Presets + utility */}
             <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
               {FILTER_PRESETS.map(p => {
-                const active = level === p.level && terrain === p.terrain && size === p.size && vert === p.vert;
+                const active = level === p.level && (p.terrain ? terrain.length === 1 && terrain[0] === p.terrain : terrain.length === 0) && size === p.size && vert === p.vert;
                 return (
                   <button key={p.label} onClick={() => applyPreset(p)} style={{ border: "2px solid currentColor", background: active ? "currentColor" : "transparent", color: active ? "var(--bx-paper,#fff)" : "inherit", padding: "0.2rem 0.6rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                     {p.label}
@@ -1219,7 +1339,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
             <div style={{ marginBottom: "0.5rem" }}>
               <p style={{ fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.4, marginBottom: "0.3rem" }}>Terrain</p>
               <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-                {TERRAIN_OPTIONS.map(o => <Pill key={String(o.value)} label={o.label} hint={o.hint} active={terrain === o.value} onClick={() => reset({ terrain: o.value })} />)}
+                {TERRAIN_OPTIONS.map(o => <Pill key={String(o.value)} label={o.label} hint={o.hint} active={o.value === null ? terrain.length === 0 : terrain.includes(o.value)} onClick={() => toggleTerrain(o.value)} />)}
               </div>
             </div>
 

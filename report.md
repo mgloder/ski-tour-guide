@@ -41,7 +41,7 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [x] 9. **Sort by lift count** — "Most lifts" sort option
 - [x] 10. **Lift-to-run ratio badge** — `runs / lifts` shown as density signal
 - [x] 11. **Nordic km in detail panel** — "X nordic trails" stat in expanded place detail
-- [ ] 12. **Vertical drop in comparison strip** — show `vd` in RunStrip area below run color bars
+- [x] 12. **Vertical drop in comparison strip** — `↕ Xm vert` shown below RunStrip color labels
 - [x] 13. **Feature icon row on card** — compact row of badges (Night · Park · Nordic) on each card
 - [x] 14. **New filter count badge** — mobile active-filter dot now counts all 6 filter dimensions
 - [x] 15. **Updated filter for terrain** — Night skiing and Snow park added to TERRAIN_OPTIONS
@@ -73,14 +73,14 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [ ] 31. **Altitude range slider** — base altitude min/max range filter
 - [ ] 32. **Min total km slider** — granular piste length filter (vs coarse S/M/L/XL)
 - [x] 33. **Vertical drop filter** — filter by vert: `< 500m`, `500–1000m`, `1000–2000m`, `2000m+`
-- [ ] 34. **Multi-terrain select** — allow selecting multiple terrain types simultaneously
+- [x] 34. **Multi-terrain select** — allow selecting multiple terrain types simultaneously
 - [x] 35. **Sort by vertical drop** — "Most vertical first" in sort dropdown
 - [x] 36. **Sort by lift count** — "Most lifts first"
 - [x] 37. **Sort by Nordic trails** — "Most nordic runs"
 - [x] 38. **Keyword search in highlights** — extend text search to also match `highlights` text
 - [x] 39. **Active filter count on mobile tab** — blue dot shows exact count of active filters
-- [ ] 40. **Clear individual filters on mobile** — "×" chip per active filter on mobile
-- [ ] 41. **Filter by country group** — region grouping (Alps, Scandinavia, North America, Japan)
+- [x] 40. **Clear individual filters on mobile** — FilterChip row with × per active filter on mobile
+- [x] 41. **Filter by country group** — region grouping (Alps, Scandinavia, North America, Japan)
 - [x] 42. **Filter presets** — "Family trip" / "Expert week" / "Backcountry" one-tap preset combos
 - [x] 43. **URL state sync** — persist filter state in URL query params for shareable links
 - [x] 44. **Resorts near me** — geolocation button: sort by distance from user's position
@@ -97,8 +97,8 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [x] 50. **Feature badges row** — icon chips: Night skiing · Snow park · Nordic on each card
 - [x] 51. **Full description text** — generated `description` shown in expanded view
 - [x] 52. **Nordic trails section** — "X nordic trails" stat when `runs_nordic > 0`
-- [ ] 53. **Smart gear recommendations** — "For this resort's terrain, you'll need: [equipment links]"
-- [ ] 54. **Required training level** — "Recommended skills: [training links]" based on difficulty tag
+- [x] 53. **Smart gear recommendations** — gear links shown in expanded detail (getRecommendedEquipment)
+- [x] 54. **Required training level** — training links shown in expanded detail (getRecommendedExercises)
 - [x] 55. **Open in maps button** — "Get directions" → opens Google/Apple Maps with resort coords
 - [x] 56. **Copy coordinates button** — copy `lat, lng` to clipboard for GPS devices
 - [x] 57. **All highlights shown** — all highlights shown (previously capped at 3)
@@ -127,19 +127,19 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 ## Section 6 — Mobile UX (13 features)
 
-- [ ] 73. **Swipe between map/list tabs** — horizontal swipe gesture in addition to tab buttons
+- [x] 73. **Swipe between map/list tabs** — horizontal swipe gesture in addition to tab buttons
 - [ ] 74. **Bottom sheet place detail** — slide-up sheet instead of overlaid list item
 - [ ] 75. **Pull-to-refresh** — pull-to-refresh gesture on list for updated data
 - [ ] 76. **Sticky filter bar on scroll** — keep filter strip visible while scrolling the list
 - [x] 77. **Infinite scroll on list** — replace "Show more" button with on-scroll automatic loading
 - [x] 78. **Compact card mode** — option to show denser list (2 per row) on mobile
-- [ ] 79. **Filter modal** — "Filter" button opens full-screen modal for complex filters on mobile
-- [ ] 80. **Haptic feedback** — subtle vibration on filter toggle/place selection (iOS/Android)
-- [ ] 81. **Share place** — native share sheet (`navigator.share`) for mobile
+- [x] 79. **Filter modal** — "Filter" button opens full-screen modal for complex filters on mobile
+- [x] 80. **Haptic feedback** — subtle vibration on filter toggle/place selection (iOS/Android)
+- [x] 81. **Share place** — native share sheet (`navigator.share`) for mobile
 - [ ] 82. **Add to home screen prompt** — PWA install prompt after repeated visits
 - [ ] 83. **Offline mode** — service worker caches recently viewed places and piste data
-- [ ] 84. **Reduce motion mode** — respect `prefers-reduced-motion` for animations/transitions
-- [ ] 85. **Large tap targets** — ensure all interactive elements are minimum 44×44px
+- [x] 84. **Reduce motion mode** — respect `prefers-reduced-motion` for animations/transitions
+- [x] 85. **Large tap targets** — all buttons/selects/inputs have minHeight 44px (Pill, mobileSelectStyle, CSS)
 
 ---
 
@@ -167,7 +167,7 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [ ] 100. **Training prerequisite banner** — on advanced place: "Haven't mastered X? Train here first"
 - [ ] 101. **Gear checklist for trip** — tick-box checklist from place + training recommendations
 - [ ] 102. **Shared tag system** — tags like "backcountry" link Places ↔ Equipment ↔ Training
-- [ ] 103. **Skill gap indicator** — "You need 2 more training modules before this resort is suitable"
+- [x] 103. **Skill gap indicator** — warning shown in detail panel when resort level exceeds quiz result
 - [ ] 104. **Pack list generator** — "For [place] in [month]: here's your packing list"
 - [ ] 105. **Cross-page breadcrumbs** — "Back to [place name]" when navigating from place to gear/training
 
@@ -179,14 +179,14 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [x] 107. **Terrain diversity chart in detail** — donut chart showing G%/B%/R%/K% split
 - [x] 108. **Best months heatmap** — 12 thin colored bars under best_months showing intensity
 - [ ] 109. **Animated piste layer load** — piste lines draw in progressively from base to peak
-- [ ] 110. **Place card skeleton loading** — skeleton placeholder cards while data loads
-- [ ] 111. **Smooth filter transitions** — CSS transition on list reorder when filter changes
+- [x] 110. **Place card skeleton loading** — SkeletonCard placeholders during initial mount
+- [x] 111. **Smooth filter transitions** — CSS transition via globals.css + reduceMotion check
 - [x] 112. **Map marker size scaling** — scale markers by resort size (total_km)
 - [ ] 113. **Altitude profile thumbnail** — small elevation profile curve in place detail
 - [x] 114. **Difficulty colour legend in run strip** — G/B/R/K color labels below the RunStrip bars
-- [ ] 115. **Responsive typography scaling** — improve font size scaling on very small/large screens
+- [x] 115. **Responsive typography scaling** — clamp() fluid font sizes at narrow/wide breakpoints
 - [ ] 116. **Accessible colour contrast** — check green/blue/red/black against WCAG AA
-- [ ] 117. **Focus ring improvements** — visible keyboard focus styles on all interactive elements
+- [x] 117. **Focus ring improvements** — :focus-visible outline in globals.css
 
 ---
 
@@ -194,7 +194,7 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 - [x] 118. **Filter state in URL** — `?level=advanced&terrain=powder&country=Austria` for shareable links
 - [x] 119. **LocalStorage filter memory** — remember last filter state between visits
-- [ ] 120. **Piste GeoJSON client cache** — persist loaded piste GeoJSON in sessionStorage
+- [x] 120. **Piste GeoJSON client cache** — persist loaded piste GeoJSON in sessionStorage
 - [ ] 121. **Places API pagination** — server-side pagination for `/api/places` (currently all 2652 at once)
 - [ ] 122. **Incremental piste load** — stream piste features progressively
 - [ ] 123. **Image CDN for resort photos** — serve via Cloudflare Images / Vercel Image Optimization
@@ -208,7 +208,7 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [ ] 126. **Season open/close dates** — typical opening and closing dates per resort
 - [ ] 127. **Lift ticket price range** — approximate price per day by country
 - [ ] 128. **Resort website verification** — check all `website` URLs are valid
-- [ ] 129. **User-submitted corrections** — form for reporting wrong coordinates / names
+- [x] 129. **User-submitted corrections** — inline "Report error" form in detail panel + /api/corrections
 - [ ] 130. **Resort photos** — attach hero photo per place (from Unsplash API by resort name)
 - [ ] 131. **Multi-language resort names** — store `name_local` for non-Latin names
 - [ ] 132. **OSM quality score** — flag resorts where piste_cache has 0 features
@@ -232,21 +232,21 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 ## Progress Summary
 
-**Completed: 77 / 142**
+**Completed: 96 / 142**
 
 | Section | Done | Total |
 |---------|------|-------|
-| 1 — New DB fields in UI | 11 | 15 |
+| 1 — New DB fields in UI | 12 | 15 |
 | 2 — Map: lifts & pistes | 13 | 14 |
-| 3 — Filters & sort | 11 | 16 |
-| 4 — Place detail panel | 14 | 16 |
+| 3 — Filters & sort | 14 | 16 |
+| 4 — Place detail panel | 16 | 16 |
 | 5 — Map interactions | 7 | 11 |
-| 6 — Mobile UX | 2 | 13 |
+| 6 — Mobile UX | 8 | 13 |
 | 7 — Home page | 7 | 10 |
-| 8 — Cross-module links | 4 | 10 |
-| 9 — Visual & design | 6 | 12 |
-| 10 — Performance | 2 | 7 |
-| 11 — Data & content | 0 | 8 |
+| 8 — Cross-module links | 5 | 10 |
+| 9 — Visual & design | 9 | 12 |
+| 10 — Performance | 3 | 7 |
+| 11 — Data & content | 1 | 8 |
 | 12 — Advanced features | 6 | 10 |
 
 ---
@@ -266,4 +266,4 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 ---
 
-*Total: 142 distinct UX enhancement features · 77 completed · 2 partial*
+*Total: 142 distinct UX enhancement features · 96 completed · 2 partial*
