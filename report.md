@@ -169,7 +169,7 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [x] 102. **Shared tag system** — tags link Places↔Equipment↔Training via getRecommended* functions
 - [x] 103. **Skill gap indicator** — warning shown in detail panel when resort level exceeds quiz result
 - [x] 104. **Pack list generator** — collapsible pack list in detail panel (altitude/tags/month aware)
-- [ ] 105. **Cross-page breadcrumbs** — "Back to [place name]" when navigating from place to gear/training
+- [x] 105. **Cross-page breadcrumbs** — "Back to [place name]" when navigating from place to gear/training
 
 ---
 
@@ -178,14 +178,14 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [x] 106. **Run strip proportional widths** — RunStrip bars are proportional to run counts
 - [x] 107. **Terrain diversity chart in detail** — donut chart showing G%/B%/R%/K% split
 - [x] 108. **Best months heatmap** — 12 thin colored bars under best_months showing intensity
-- [ ] 109. **Animated piste layer load** — piste lines draw in progressively from base to peak
+- [x] 109. **Animated piste layer load** — piste lines draw in progressively from base to peak
 - [x] 110. **Place card skeleton loading** — SkeletonCard placeholders during initial mount
 - [x] 111. **Smooth filter transitions** — CSS transition via globals.css + reduceMotion check
 - [x] 112. **Map marker size scaling** — scale markers by resort size (total_km)
 - [x] 113. **Altitude profile thumbnail** — SVG mountain silhouette with base→peak labels
 - [x] 114. **Difficulty colour legend in run strip** — G/B/R/K color labels below the RunStrip bars
 - [x] 115. **Responsive typography scaling** — clamp() fluid font sizes at narrow/wide breakpoints
-- [ ] 116. **Accessible colour contrast** — check green/blue/red/black against WCAG AA
+- [x] 116. **Accessible colour contrast** — check green/blue/red/black against WCAG AA
 - [x] 117. **Focus ring improvements** — :focus-visible outline in globals.css
 
 ---
@@ -195,7 +195,7 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [x] 118. **Filter state in URL** — `?level=advanced&terrain=powder&country=Austria` for shareable links
 - [x] 119. **LocalStorage filter memory** — remember last filter state between visits
 - [x] 120. **Piste GeoJSON client cache** — persist loaded piste GeoJSON in sessionStorage
-- [ ] 121. **Places API pagination** — server-side pagination for `/api/places` (currently all 2652 at once)
+- [x] 121. **Places API pagination** — server-side pagination for `/api/places` (currently all 2652 at once)
 - [ ] 122. **Incremental piste load** — stream piste features progressively
 - [ ] 123. **Image CDN for resort photos** — serve via Cloudflare Images / Vercel Image Optimization
 - [x] 124. **Prefetch next page** — IntersectionObserver sentinel auto-loads next batch (infinite scroll)
@@ -221,7 +221,7 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 - [x] 134. **Favorites / Wishlist** — localStorage-persisted starred places list
 - [x] 135. **Compare mode** — select 2–3 places and view side-by-side stat table
 - [x] 136. **Ski level self-assessment quiz** — 5-question quiz → sets level filter automatically
-- [ ] 137. **AI resort recommender** — natural language: "find me a powder resort in Austria under 150km"
+- [x] 137. **AI resort recommender** — natural language: "find me a powder resort in Austria under 150km"
 - [x] 138. **Weather integration** — OpenMeteo API call for current weather at resort lat/lng
 - [x] 139. **Snow depth integration** — "Snow ↗" link to OnTheSnow.com in action buttons
 - [ ] 140. **Community reviews** — structured review form: snow quality, crowds, value, family-friendliness
@@ -232,22 +232,22 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 ## Progress Summary
 
-**Completed: 113 / 142**
+**Completed: 118 / 142**
 
 | Section | Done | Total |
 |---------|------|-------|
 | 1 — New DB fields in UI | 12 | 15 |
-| 2 — Map: lifts & pistes | 13 | 14 |
+| 2 — Map: lifts & pistes | 14 | 14 |
 | 3 — Filters & sort | 16 | 16 |
 | 4 — Place detail panel | 16 | 16 |
 | 5 — Map interactions | 7 | 11 |
 | 6 — Mobile UX | 9 | 13 |
 | 7 — Home page | 9 | 10 |
-| 8 — Cross-module links | 8 | 10 |
-| 9 — Visual & design | 10 | 12 |
-| 10 — Performance | 5 | 7 |
+| 8 — Cross-module links | 9 | 10 |
+| 9 — Visual & design | 11 | 12 |
+| 10 — Performance | 6 | 7 |
 | 11 — Data & content | 2 | 8 |
-| 12 — Advanced features | 6 | 10 |
+| 12 — Advanced features | 7 | 10 |
 
 ---
 
@@ -266,4 +266,4 @@ The `piste_cache` table also now stores `kind="lift"` features, enabling lift-sp
 
 ---
 
-*Total: 142 distinct UX enhancement features · 113 completed · 2 partial*
+*Total: 142 distinct UX enhancement features · 118 completed · 2 partial*

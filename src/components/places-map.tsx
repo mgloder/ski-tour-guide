@@ -26,7 +26,25 @@ function buildGeoJSON(places: DbPlace[], highlightedIds: string[], selectedId: s
 async function fetchPistes(placeId: string, signal: AbortSignal) {
   const res = await fetch(`/api/pistes?id=${encodeURIComponent(placeId)}`, { signal });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json() as Promise<{ type: "FeatureCollection"; features: { type: "Feature"; geometry: { type: "LineString"; coordinates: [number, number][] }; properties: { kind: string; difficulty: string } }[] }>;
+  return res.json() as Promise<{ type: "FeatureCollection"; features: { type: "Feature"; geometry: { type: "LineString"; coordinates: [number, number][] }; properties: { kind: string; difficulty: string; liftCategory?: string } }[] }>;
+}
+
+/** Annotate each lift feature with a liftCategory based on coordinate count (proxy for length). */
+function annotateLiftCategories(geojson: { type: "FeatureCollection"; features: any[] }) {
+  return {
+    ...geojson,
+    features: geojson.features.map((f: any) => {
+      if (f.properties?.kind !== "lift") return f;
+      const coordCount: number = f.geometry?.coordinates?.length ?? 0;
+      return {
+        ...f,
+        properties: {
+          ...f.properties,
+          liftCategory: coordCount < 4 ? "short" : "long",
+        },
+      };
+    }),
+  };
 }
 
 function safeBounds(places: DbPlace[]) {
@@ -82,6 +100,8 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
   const [fullscreen, setFullscreen]                 = useState(false);
   const [difficultyFilter, setDifficultyFilter]     = useState<PisteDifficulty>("all");
   const [attributionVisible, setAttributionVisible] = useState(true);
+  const [showLabels, setShowLabels]                 = useState(true);  // Feature 2: label density
+  const [bearing, setBearing]                       = useState(0);     // Feature 5: bearing reset
   const containerRef               = useRef<HTMLDivElement>(null);
   const mapRef                     = useRef<any>(null);
   const mapReadyRef                = useRef(false);
@@ -95,6 +115,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
   const layerVisRef                = useRef({ pistes: true, lifts: true });
   const attributionControlRef      = useRef<any>(null);
   const mlRef                      = useRef<any>(null);
+  const pisteAnimatedRef           = useRef(false);  // Feature 4: animate only on first load
 
   // Keep refs in sync with latest props
   useEffect(() => { onSelectRef.current        = onSelect;        }, [onSelect]);
@@ -103,6 +124,50 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
   useEffect(() => { placesRef.current          = places;          }, [places]);
   useEffect(() => { highlightedRef.current     = highlightedIds;  }, [highlightedIds]);
   useEffect(() => { selectedRef.current        = selected;        }, [selected]);
+
+  // ── Feature 2: Label density ─────────────────────────────────────────────
+  function applyLabelVisibility(map: any, visible: boolean) {
+    const style = map.getStyle();
+    if (!style) return;
+    for (const layer of style.layers ?? []) {
+      if (layer.type === "symbol") {
+        map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
+      }
+    }
+  }
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current) return;
+    applyLabelVisibility(map, showLabels);
+  }, [showLabels]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Feature 3: Keyboard navigation ───────────────────────────────────────
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    // Focus map container on mount so keyboard events are captured immediately
+    el.focus({ preventScroll: true });
+    function handleKeyDown(e: KeyboardEvent) {
+      const map = mapRef.current;
+      if (!map || !mapReadyRef.current) return;
+      const ids = highlightedRef.current;
+      if (!ids.length) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const currentId = selectedRef.current?.id ?? "";
+        const idx = ids.indexOf(currentId);
+        const nextIdx = e.key === "ArrowDown"
+          ? (idx + 1) % ids.length
+          : (idx - 1 + ids.length) % ids.length;
+        const nextId = ids[nextIdx];
+        const place = placesRef.current.find(p => p.id === nextId);
+        if (place) onSelectRef.current(place);
+      }
+    }
+    el.addEventListener("keydown", handleKeyDown);
+    return () => el.removeEventListener("keydown", handleKeyDown);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Difficulty filter ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -205,16 +270,38 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
     });
   }
 
+  // Feature 1: lift hover tooltips on both sub-layers
+  function addLiftHoverListeners(map: any) {
+    for (const liftLayer of ["lifts-short", "lifts-long"] as const) {
+      map.on("mouseenter", liftLayer, (e: any) => {
+        map.getCanvas().style.cursor = "crosshair";
+        const feat = e.features?.[0];
+        if (!feat) return;
+        const name = feat.properties?.name || feat.properties?.ref || "";
+        const kind = feat.properties?.kind || "lift";
+        if (name) setLineHover({ name, kind, x: e.originalEvent.clientX, y: e.originalEvent.clientY });
+      });
+      map.on("mousemove", liftLayer, (e: any) => {
+        setLineHover(prev => prev ? { ...prev, x: e.originalEvent.clientX, y: e.originalEvent.clientY } : null);
+      });
+      map.on("mouseleave", liftLayer, () => {
+        map.getCanvas().style.cursor = "";
+        setLineHover(null);
+      });
+    }
+  }
+
   // ── Selection: camera + piste overlay for the selected place ────────────
   function applySelection(map: any, place: DbPlace | null) {
     // Cancel any in-flight piste request and clear previous overlay
     pisteAbortRef.current?.abort();
     pisteAbortRef.current = null;
     setPisteError(false);
-    if (map.getLayer("pistes-hover")) map.removeLayer("pistes-hover");
-    if (map.getLayer("pistes")) map.removeLayer("pistes");
-    if (map.getLayer("lifts"))  map.removeLayer("lifts");
-    if (map.getSource("ski"))   map.removeSource("ski");
+    if (map.getLayer("pistes-hover"))  map.removeLayer("pistes-hover");
+    if (map.getLayer("pistes"))        map.removeLayer("pistes");
+    if (map.getLayer("lifts-long"))    map.removeLayer("lifts-long");
+    if (map.getLayer("lifts-short"))   map.removeLayer("lifts-short");
+    if (map.getSource("ski"))          map.removeSource("ski");
     setDifficultyFilter("all");
 
     if (!place) {
@@ -235,14 +322,20 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
     try {
       const cached = sessionStorage.getItem("ski-piste-" + place.id);
       if (cached) {
-        const geojson = JSON.parse(cached);
+        const rawGeojson = JSON.parse(cached);
+        const geojson = annotateLiftCategories(rawGeojson);
         setPisteLoading(false);
         if (!mapRef.current || map.getSource("ski")) return;
         map.addSource("ski", { type: "geojson", data: geojson });
-        map.addLayer({ id: "lifts", type: "line", source: "ski",
-          filter: ["==", ["get", "kind"], "lift"],
+        // Feature 1: two lift sub-layers by category
+        map.addLayer({ id: "lifts-short", type: "line", source: "ski",
+          filter: ["all", ["==", ["get", "kind"], "lift"], ["==", ["get", "liftCategory"], "short"]],
           layout: { visibility: layerVisRef.current.lifts ? "visible" : "none" },
-          paint: { "line-color": "#9ca3af", "line-width": 1.5, "line-dasharray": [3, 2] } });
+          paint: { "line-color": "#9ca3af", "line-width": 1.5, "line-dasharray": [2, 2] } });
+        map.addLayer({ id: "lifts-long", type: "line", source: "ski",
+          filter: ["all", ["==", ["get", "kind"], "lift"], ["==", ["get", "liftCategory"], "long"]],
+          layout: { visibility: layerVisRef.current.lifts ? "visible" : "none" },
+          paint: { "line-color": "#6b7280", "line-width": 2, "line-dasharray": [5, 2] } });
         map.addLayer({ id: "pistes", type: "line", source: "ski",
           filter: ["==", ["get", "kind"], "piste"],
           layout: { visibility: layerVisRef.current.pistes ? "visible" : "none" },
@@ -254,21 +347,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
           } });
         setPisteLoaded(true);
         addPisteHoverListeners(map);
-        map.on("mouseenter", "lifts", (e: any) => {
-          map.getCanvas().style.cursor = "crosshair";
-          const feat = e.features?.[0];
-          if (!feat) return;
-          const name = feat.properties?.name || feat.properties?.ref || "";
-          const kind = feat.properties?.kind || "lift";
-          if (name) setLineHover({ name, kind, x: e.originalEvent.clientX, y: e.originalEvent.clientY });
-        });
-        map.on("mousemove", "lifts", (e: any) => {
-          setLineHover(prev => prev ? { ...prev, x: e.originalEvent.clientX, y: e.originalEvent.clientY } : null);
-        });
-        map.on("mouseleave", "lifts", () => {
-          map.getCanvas().style.cursor = "";
-          setLineHover(null);
-        });
+        addLiftHoverListeners(map);
         const coords = geojson.features
           .filter((f: any) => f.properties.kind === "piste")
           .flatMap((f: any) => f.geometry.coordinates as [number, number][]);
@@ -300,13 +379,20 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       if (abort.signal.aborted) return;
       setPisteLoading(false);
       if (!mapRef.current || map.getSource("ski")) return;
+      // Annotate lift categories before caching
+      const annotated = annotateLiftCategories(geojson);
       // Store in sessionStorage cache (#120)
-      try { sessionStorage.setItem("ski-piste-" + place.id, JSON.stringify(geojson)); } catch { /* quota exceeded or private mode */ }
-      map.addSource("ski", { type: "geojson", data: geojson });
-      map.addLayer({ id: "lifts", type: "line", source: "ski",
-        filter: ["==", ["get", "kind"], "lift"],
+      try { sessionStorage.setItem("ski-piste-" + place.id, JSON.stringify(annotated)); } catch { /* quota exceeded or private mode */ }
+      map.addSource("ski", { type: "geojson", data: annotated });
+      // Feature 1: two lift sub-layers by category
+      map.addLayer({ id: "lifts-short", type: "line", source: "ski",
+        filter: ["all", ["==", ["get", "kind"], "lift"], ["==", ["get", "liftCategory"], "short"]],
         layout: { visibility: layerVisRef.current.lifts ? "visible" : "none" },
-        paint: { "line-color": "#9ca3af", "line-width": 1.5, "line-dasharray": [3, 2] } });
+        paint: { "line-color": "#9ca3af", "line-width": 1.5, "line-dasharray": [2, 2] } });
+      map.addLayer({ id: "lifts-long", type: "line", source: "ski",
+        filter: ["all", ["==", ["get", "kind"], "lift"], ["==", ["get", "liftCategory"], "long"]],
+        layout: { visibility: layerVisRef.current.lifts ? "visible" : "none" },
+        paint: { "line-color": "#6b7280", "line-width": 2, "line-dasharray": [5, 2] } });
       map.addLayer({ id: "pistes", type: "line", source: "ski",
         filter: ["==", ["get", "kind"], "piste"],
         layout: { visibility: layerVisRef.current.pistes ? "visible" : "none" },
@@ -318,25 +404,29 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
         } });
       setPisteLoaded(true);
 
+      // Feature 4: animated piste draw-in on first load
+      if (!pisteAnimatedRef.current) {
+        pisteAnimatedRef.current = true;
+        let step = 0;
+        const steps = 24;
+        const animate = () => {
+          step++;
+          const drawn = (step / steps) * 200;
+          const gap = 200 - drawn;
+          if (map.getLayer("pistes")) {
+            map.setPaintProperty("pistes", "line-dasharray", [drawn, gap]);
+          }
+          if (step < steps) requestAnimationFrame(animate);
+          else if (map.getLayer("pistes")) map.setPaintProperty("pistes", "line-dasharray", undefined as any);
+        };
+        requestAnimationFrame(animate);
+      }
+
       // Piste hover glow (#29)
       addPisteHoverListeners(map);
 
-      // Lift hover tooltips (keep existing behaviour)
-      map.on("mouseenter", "lifts", (e: any) => {
-        map.getCanvas().style.cursor = "crosshair";
-        const feat = e.features?.[0];
-        if (!feat) return;
-        const name = feat.properties?.name || feat.properties?.ref || "";
-        const kind = feat.properties?.kind || "lift";
-        if (name) setLineHover({ name, kind, x: e.originalEvent.clientX, y: e.originalEvent.clientY });
-      });
-      map.on("mousemove", "lifts", (e: any) => {
-        setLineHover(prev => prev ? { ...prev, x: e.originalEvent.clientX, y: e.originalEvent.clientY } : null);
-      });
-      map.on("mouseleave", "lifts", () => {
-        map.getCanvas().style.cursor = "";
-        setLineHover(null);
-      });
+      // Lift hover tooltips
+      addLiftHoverListeners(map);
 
       // Fit camera to the full extent of the loaded pistes, but never zoom out
       const coords = geojson.features
@@ -491,6 +581,9 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       map.addControl(attrControl, "bottom-left");
       map.addControl(new ml.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-right");
 
+      // Feature 5: ensure touch rotate is enabled
+      if (map.touchZoomRotate) map.touchZoomRotate.enableRotation();
+
       // Use style.load (fires before all tiles) so we can interact sooner
       map.once("style.load", () => {
         if (cancelled) return;
@@ -504,6 +597,9 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
         );
 
         addPlaceLayers(map, "street");
+
+        // Feature 5: track bearing for reset button
+        map.on("rotate", () => setBearing(map.getBearing()));
 
         // Cluster click → zoom in + filter list to cluster contents
         map.on("click", "clusters", async e => {
@@ -630,6 +726,8 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       if (mapStyle === "satellite") {
         tryAddTerrain(map);
       }
+      // Feature 2: re-apply label visibility after style reload
+      applyLabelVisibility(map, showLabels);
       // Re-add piste overlay if selected; also reset difficulty filter
       setDifficultyFilter("all");
       if (selectedRef.current) applySelection(map, selectedRef.current);
@@ -660,8 +758,13 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
     layerVisRef.current = next;
     setLayerVis(next);
     const map = mapRef.current;
-    if (map && map.getLayer(layer)) {
-      map.setLayoutProperty(layer, "visibility", next[layer] ? "visible" : "none");
+    if (!map) return;
+    const vis = next[layer] ? "visible" : "none";
+    if (layer === "lifts") {
+      if (map.getLayer("lifts-short")) map.setLayoutProperty("lifts-short", "visibility", vis);
+      if (map.getLayer("lifts-long"))  map.setLayoutProperty("lifts-long",  "visibility", vis);
+    } else {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", vis);
     }
   }
 
@@ -700,7 +803,12 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", ...(fullscreen ? { position: "fixed", inset: 0, zIndex: 9999 } : {}) }}>
-      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+      {/* Feature 3: tabIndex + autoFocus for keyboard navigation */}
+      <div
+        ref={containerRef}
+        tabIndex={0}
+        style={{ width: "100%", height: "100%", outline: "none" }}
+      />
       {/* Map tile loading spinner */}
       {loading && (
         <div style={{
@@ -862,6 +970,28 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
         >
           ©
         </button>
+        {/* Feature 2: Labels toggle */}
+        <button
+          onClick={() => setShowLabels(v => !v)}
+          title={showLabels ? "Hide map labels" : "Show map labels"}
+          style={{
+            ...btnBase,
+            background: showLabels ? "rgba(255,255,255,0.92)" : "#000",
+            color: showLabels ? "#111" : "#fff",
+          }}
+        >
+          Labels
+        </button>
+        {/* Feature 5: Bearing reset — only visible when rotated > 5° */}
+        {Math.abs(bearing) > 5 && (
+          <button
+            onClick={() => mapRef.current?.resetNorth({ duration: 300 })}
+            title="Reset bearing to north"
+            style={{ ...btnBase, background: "rgba(255,255,255,0.92)", color: "#111" }}
+          >
+            ⊕
+          </button>
+        )}
         <button
           onClick={() => window.print()}
           style={{ ...btnBase, background: "rgba(255,255,255,0.92)", color: "#111" }}

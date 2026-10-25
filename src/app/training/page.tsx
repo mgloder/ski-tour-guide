@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import RoadmapClient from "@/components/roadmap-client";
+import BackToPlace from "@/components/back-to-place";
 
 export const metadata: Metadata = {
   title: "Training",
@@ -9,5 +10,10 @@ export const metadata: Metadata = {
 };
 
 export default function TrainingPage() {
-  return <RoadmapClient />;
+  return (
+    <div>
+      <BackToPlace />
+      <RoadmapClient />
+    </div>
+  );
 }

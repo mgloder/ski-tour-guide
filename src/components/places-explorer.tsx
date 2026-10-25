@@ -82,6 +82,34 @@ const SK_TRIP      = "ski-trip-v1";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function parseNaturalQuery(text: string): {
+  level?: string; terrains?: string[]; country?: string; minKm?: number; month?: string; sort?: string;
+} {
+  const q = text.toLowerCase();
+  const result: ReturnType<typeof parseNaturalQuery> = {};
+  if (/beginner|easy|starter|first.?tim|green|learn/i.test(q)) result.level = "beginner";
+  else if (/intermediate|middle|blue|progress/i.test(q)) result.level = "intermediate";
+  else if (/advanced|expert|black|red|difficult|challeng/i.test(q)) result.level = "advanced";
+  const terrains: string[] = [];
+  if (/powder|deep.?snow|freeride|off.?piste/i.test(q)) terrains.push("powder");
+  if (/glacier|year.?round|summer/i.test(q)) terrains.push("glacier");
+  if (/backcountry|touring|skinning|uphill/i.test(q)) terrains.push("backcountry");
+  if (/night.?ski/i.test(q)) terrains.push("night");
+  if (/snow.?park|park|jump|rail|halfpipe/i.test(q)) terrains.push("snowpark");
+  if (/nordic|cross.?country|xc/i.test(q)) terrains.push("nordic");
+  if (terrains.length) result.terrains = terrains;
+  const countryMap: Record<string, string> = { austria: "Austria", swiss: "Switzerland", switzerland: "Switzerland", france: "France", italy: "Italy", norway: "Norway", sweden: "Sweden", japan: "Japan", canada: "Canada", "united states": "United States", usa: "United States", finland: "Finland", germany: "Germany", spain: "Spain" };
+  for (const [k, v] of Object.entries(countryMap)) { if (q.includes(k)) { result.country = v; break; } }
+  const kmMatch = q.match(/(\d+)\s*km/);
+  if (kmMatch) result.minKm = parseInt(kmMatch[1]);
+  const monthMap: Record<string, string> = { january:"Jan", february:"Feb", march:"Mar", april:"Apr", may:"May", june:"Jun", july:"Jul", august:"Aug", september:"Sep", october:"Oct", november:"Nov", december:"Dec" };
+  for (const [k, v] of Object.entries(monthMap)) { if (q.includes(k)) { result.month = v; break; } }
+  if (/vertical|vert|drop/i.test(q)) result.sort = "vertical";
+  else if (/big|largest|most.?km/i.test(q)) result.sort = "size";
+  else if (/high|altitude|elevation/i.test(q)) result.sort = "altitude";
+  return result;
+}
+
 // Feature E: Haptic feedback
 function haptic(pattern: number | number[] = 10) {
   try { if ("vibrate" in navigator) navigator.vibrate(pattern); } catch {}
@@ -324,7 +352,7 @@ function RunStrip({ place }: { place: DbPlace }) {
       </div>
       <div style={{ display: "flex" }}>
         {cells.map(({ bg, n, label }) => (
-          <div key={label} style={{ flex: n || 0.3, fontSize: "0.5rem", textAlign: "center", opacity: 0.45, fontWeight: 700, paddingTop: "0.1rem", color: bg }}>
+          <div key={label} style={{ flex: n || 0.3, fontSize: "0.5rem", textAlign: "center", opacity: 0.65, fontWeight: 700, paddingTop: "0.1rem", color: bg }}>
             {label}
           </div>
         ))}
@@ -401,7 +429,8 @@ function FeatureBadges({ place, selected }: { place: DbPlace; selected: boolean 
   const ratio = totalRuns > 0 && (place.lifts_count || 0) > 0
     ? (totalRuns / place.lifts_count).toFixed(1)
     : null;
-  if (!place.has_night_skiing && !place.has_snow_park && !(place.runs_nordic > 0) && !ratio) return null;
+  const hasRunData = totalRuns > 0 || (place.total_km || 0) > 0;
+  if (!place.has_night_skiing && !place.has_snow_park && !(place.runs_nordic > 0) && !ratio && hasRunData) return null;
   const bs: React.CSSProperties = { border: `1px solid ${borderColor}`, padding: "0.1rem 0.4rem", fontSize: "0.55rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.85 };
   return (
     <div style={{ display: "flex", gap: "0.25rem", marginTop: "0.35rem", flexWrap: "wrap" }}>
@@ -409,6 +438,7 @@ function FeatureBadges({ place, selected }: { place: DbPlace; selected: boolean 
       {place.has_snow_park    && <span style={bs}>Park</span>}
       {place.runs_nordic > 0  && <span style={bs}>Nordic</span>}
       {ratio && <span style={bs}>{ratio} runs/lift</span>}
+      {!hasRunData && <span style={{ ...bs, opacity: 0.4, borderStyle: "dashed" }}>limited data</span>}
     </div>
   );
 }
@@ -607,10 +637,19 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   const [minAltitude,        setMinAltitude]        = useState<number>(0);
   // Feature #104: pack list
   const [showPackList,       setShowPackList]       = useState<string | null>(null);
+  // Feature #137: AI recommender
+  const [nlQuery,            setNlQuery]            = useState("");
 
   // Feature D: swipe refs
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
+
+  // Feature #74: bottom sheet
+  const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
+
+  // Feature #75: pull-to-refresh
+  const pullStartY = useRef(0);
+  const [pullDistance, setPullDistance] = useState(0);
 
   const listRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -799,7 +838,13 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   function handleSelect(place: DbPlace) {
     setSelected(prev => {
       const next = prev?.id === place.id ? null : place;
-      if (next) { trackRecent(place.id); setRecentIds(r => [place.id, ...r.filter(id => id !== place.id)].slice(0, 8)); }
+      if (next) {
+        trackRecent(place.id);
+        setRecentIds(r => [place.id, ...r.filter(id => id !== place.id)].slice(0, 8));
+        if (isMobile) setBottomSheetOpen(true);
+      } else {
+        setBottomSheetOpen(false);
+      }
       return next;
     });
   }
@@ -808,7 +853,10 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     setSelected(place);
     trackRecent(place.id);
     setRecentIds(r => [place.id, ...r.filter(id => id !== place.id)].slice(0, 8));
-    if (isMobile) setMobileTab("list");
+    if (isMobile) {
+      setMobileTab("list");
+      setBottomSheetOpen(true);
+    }
   }
 
   function handleClusterSelect(ids: string[]) { setClusterIds(ids); setSelected(null); setVisible(PAGE); }
@@ -817,6 +865,20 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   function applyPreset(p: typeof FILTER_PRESETS[0]) {
     setLevel(p.level); setTerrain(p.terrain ? [p.terrain] : []); setSize(p.size); setVert(p.vert);
     setSelected(null); setClusterIds(null); setVisible(PAGE);
+  }
+
+  function applyNlQuery(text: string) {
+    const r = parseNaturalQuery(text);
+    if (r.level)    setLevel(r.level);
+    if (r.terrains) setTerrain(r.terrains);
+    if (r.country)  setCountry(r.country);
+    if (r.minKm)    setMinKm(r.minKm);
+    if (r.month)    setMonth(r.month);
+    if (r.sort)     setSortBy(r.sort);
+    setNlQuery("");
+    setVisible(PAGE);
+    setSelected(null);
+    setClusterIds(null);
   }
 
   function toggleFavorite(e: React.MouseEvent, placeId: string) {
@@ -992,7 +1054,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           <div>
             <p style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.7, marginBottom: "0.35rem" }}>Gear</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
-              {equipItems.map(e => <Link key={e.id} href={`/equipment#${e.id}`} style={{ border: "1px solid rgba(255,255,255,0.5)", color: "#fff", padding: "0.15rem 0.5rem", fontSize: "0.65rem", textDecoration: "none" }}>{e.name}</Link>)}
+              {equipItems.map(e => <Link key={e.id} href={`/equipment#${e.id}`} style={{ border: "1px solid rgba(255,255,255,0.5)", color: "#fff", padding: "0.15rem 0.5rem", fontSize: "0.65rem", textDecoration: "none" }} onClick={() => { try { sessionStorage.setItem("ski-from-place", JSON.stringify({ id: place.id, name: place.name })); } catch {} }}>{e.name}</Link>)}
             </div>
           </div>
         )}
@@ -1000,7 +1062,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           <div>
             <p style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.7, marginBottom: "0.35rem" }}>Training</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
-              {exItems.map(e => <Link key={e.id} href={`/training#${e.id}`} style={{ border: "1px solid rgba(255,255,255,0.5)", color: "#fff", padding: "0.15rem 0.5rem", fontSize: "0.65rem", textDecoration: "none" }}>{e.name}</Link>)}
+              {exItems.map(e => <Link key={e.id} href={`/training#${e.id}`} style={{ border: "1px solid rgba(255,255,255,0.5)", color: "#fff", padding: "0.15rem 0.5rem", fontSize: "0.65rem", textDecoration: "none" }} onClick={() => { try { sessionStorage.setItem("ski-from-place", JSON.stringify({ id: place.id, name: place.name })); } catch {} }}>{e.name}</Link>)}
             </div>
           </div>
         )}
@@ -1143,7 +1205,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
             ))}
           </div>
         )}
-        {isSelected && renderDetail(place)}
+        {isSelected && !isMobile && renderDetail(place)}
       </div>
     );
   }
@@ -1279,10 +1341,49 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
               )}
             </div>
 
+            {/* AI recommender strip */}
+            <form
+              onSubmit={e => { e.preventDefault(); if (nlQuery.trim()) applyNlQuery(nlQuery.trim()); }}
+              style={{ flexShrink: 0, borderBottom: "1px solid currentColor", padding: "0.4rem 0.75rem", display: "flex", gap: "0.35rem", opacity: 0.75 }}
+            >
+              <input
+                type="text"
+                placeholder="Try: beginner resort in Japan…"
+                value={nlQuery}
+                onChange={e => setNlQuery(e.target.value)}
+                style={{ flex: 1, height: "36px", border: "1.5px dashed currentColor", background: "transparent", color: "inherit", padding: "0 0.6rem", fontSize: "0.7rem", fontFamily: "inherit", outline: "none" }}
+              />
+              <button
+                type="submit"
+                style={{ height: "36px", padding: "0 0.75rem", border: "1.5px dashed currentColor", background: "transparent", color: "inherit", cursor: "pointer", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em", flexShrink: 0 }}
+              >
+                AI
+              </button>
+            </form>
+
             {/* List */}
-            <div ref={listRef} style={{ flex: 1, overflowY: "auto" }}>
+            <div
+              ref={listRef}
+              style={{ flex: 1, overflowY: "auto" }}
+              onTouchStart={e => { pullStartY.current = e.touches[0].clientY; }}
+              onTouchMove={e => {
+                if (listRef.current && listRef.current.scrollTop === 0) {
+                  const dy = e.touches[0].clientY - pullStartY.current;
+                  if (dy > 0) setPullDistance(Math.min(dy, 80));
+                }
+              }}
+              onTouchEnd={() => {
+                if (pullDistance > 60) window.location.reload();
+                setPullDistance(0);
+              }}
+            >
+              {pullDistance > 0 && (
+                <div style={{ height: pullDistance, display: "flex", alignItems: "center", justifyContent: "center", opacity: pullDistance / 80, fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  {pullDistance > 60 ? "Release to refresh" : "Pull to refresh"}
+                </div>
+              )}
               {(clusterIds || selected) && (
-                <button onClick={clusterIds ? clearCluster : () => setSelected(null)} style={{ border: "none", borderBottom: "2px solid currentColor", background: "transparent", padding: "0.75rem 1rem", cursor: "pointer", textAlign: "left", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.5, width: "100%" }}>
+                <button onClick={clusterIds ? clearCluster : () => { setSelected(null); setBottomSheetOpen(false); }} style={{ border: "none", borderBottom: "2px solid currentColor", background: "transparent", padding: "0.75rem 1rem", cursor: "pointer", textAlign: "left", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.5, width: "100%" }}>
                   ← {clusterIds ? `All ${filtered.length} places` : "All places"}
                 </button>
               )}
@@ -1300,6 +1401,23 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
               <button onClick={() => setShowCompare(true)} style={{ border: "2px solid #fff", background: "#fff", color: "var(--bx-primary,#2b44ff)", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em" }}>View →</button>
               <button onClick={() => setCompareIds(new Set())} style={{ border: "2px solid rgba(255,255,255,0.6)", background: "transparent", color: "#fff", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.85rem", fontWeight: 900 }}>×</button>
             </div>
+          </div>
+        )}
+
+        {/* Bottom sheet overlay (#74) */}
+        {isMobile && selected && bottomSheetOpen && (
+          <div
+            style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, background: "var(--bx-paper,#fff)", color: "var(--bx-ink,#111)", borderTop: "3px solid currentColor", maxHeight: "70dvh", overflowY: "auto", padding: "1rem", transition: "transform 0.25s ease", transform: bottomSheetOpen ? "translateY(0)" : "translateY(100%)" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+              <div>
+                <p style={{ fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.5 }}>{selected.country} · {selected.region}</p>
+                <p style={{ fontWeight: 900, fontSize: "1.05rem" }}>{selected.name}</p>
+              </div>
+              <button onClick={() => { setBottomSheetOpen(false); setSelected(null); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", opacity: 0.4, lineHeight: 1 }}>×</button>
+            </div>
+            {renderDetail(selected)}
           </div>
         )}
 
@@ -1401,6 +1519,26 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
             onChange={e => reset({ query: e.target.value })}
             style={{ width: "100%", border: "2px solid currentColor", background: "transparent", color: "inherit", padding: "0.35rem 0.6rem", fontSize: "0.8rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
           />
+
+          {/* AI recommender */}
+          <form
+            onSubmit={e => { e.preventDefault(); if (nlQuery.trim()) applyNlQuery(nlQuery.trim()); }}
+            style={{ marginTop: "0.4rem", display: "flex", gap: "0.35rem" }}
+          >
+            <input
+              type="text"
+              placeholder="Try: powder resort in Austria with 200+ km…"
+              value={nlQuery}
+              onChange={e => setNlQuery(e.target.value)}
+              style={{ flex: 1, border: "1.5px dashed currentColor", background: "transparent", color: "inherit", padding: "0.3rem 0.6rem", fontSize: "0.7rem", fontFamily: "inherit", outline: "none", opacity: 0.7 }}
+            />
+            <button
+              type="submit"
+              style={{ border: "1.5px dashed currentColor", background: "transparent", color: "inherit", padding: "0.3rem 0.65rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.7, whiteSpace: "nowrap" }}
+            >
+              Go
+            </button>
+          </form>
 
           {/* Active chips — always visible when filters are active */}
           {chips.length > 0 && (

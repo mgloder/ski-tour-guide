@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import EquipmentExplorer from "@/components/equipment-explorer";
+import BackToPlace from "@/components/back-to-place";
 
 export const metadata: Metadata = {
   title: "Equipment",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 export default function EquipmentPage() {
   return (
     <div>
+      <BackToPlace />
       <div style={{ padding: "1.5rem 1.5rem 1rem", borderBottom: "3px solid currentColor" }}>
         <p className="bx-text-xs bx-uppercase bx-tracking-wide" style={{ opacity: 0.5 }}>Module 02</p>
         <h1 className="bx-display-2 bx-mb-0">Equipment</h1>

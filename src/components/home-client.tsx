@@ -333,6 +333,31 @@ function ModuleProgressCards() {
   );
 }
 
+// ── PWA install prompt (#82) ──────────────────────────────────────────────
+
+function PWAInstallPrompt() {
+  const [deferredPrompt, setDeferredPrompt] = useState<Event & { prompt: () => void } | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => { e.preventDefault(); setDeferredPrompt(e as Event & { prompt: () => void }); };
+    window.addEventListener("beforeinstallprompt", handler);
+    try { if (localStorage.getItem("ski-pwa-dismissed")) setDismissed(true); } catch {}
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  if (!deferredPrompt || dismissed) return null;
+  return (
+    <div style={{ marginTop: "1rem", border: "2px solid currentColor", padding: "0.75rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+      <p style={{ fontSize: "0.75rem", fontWeight: 700, margin: 0 }}>Add The Ski Handbook to your home screen for quick access.</p>
+      <div style={{ display: "flex", gap: "0.4rem" }}>
+        <button onClick={() => { deferredPrompt.prompt(); setDeferredPrompt(null); }} style={{ border: "2px solid currentColor", background: "currentColor", color: "var(--bx-paper,#fff)", padding: "0.35rem 0.75rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase" }}>Install</button>
+        <button onClick={() => { setDismissed(true); try { localStorage.setItem("ski-pwa-dismissed", "1"); } catch {} }} style={{ border: "2px solid currentColor", background: "transparent", padding: "0.35rem 0.6rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700 }}>×</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Combined home client section ──────────────────────────────────────────
 
 type HomeClientProps = {
@@ -346,6 +371,7 @@ export default function HomeClient({ places }: HomeClientProps) {
       <TrainingProgressTeaser />
       <LevelRecommendations places={places} />
       <ModuleProgressCards />
+      <PWAInstallPrompt />
     </div>
   );
 }

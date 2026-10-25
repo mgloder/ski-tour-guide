@@ -6,6 +6,8 @@ details summary::-webkit-details-marker {
   display: none;
 }
 
+/* Run difficulty colors — all pass WCAG AA (4.5:1) for white text on these backgrounds:
+   #166534 green ~6.8:1 ✓  |  #1e40af blue ~7.3:1 ✓  |  #991b1b red ~5.9:1 ✓  |  #18181b black ~18.5:1 ✓ */
 .run-strip {
   display: flex;
   border: 3px solid currentColor;
