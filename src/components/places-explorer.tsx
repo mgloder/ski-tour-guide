@@ -743,9 +743,15 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   );
   const highlightedIds = useMemo(() => filtered.map(p => p.id), [filtered]);
 
+  // Only send matching places to the map — non-matching markers should not appear
+  const mapPlaces = useMemo(
+    () => showFavsOnly ? filtered.filter(p => favorites.has(p.id)) : filtered,
+    [filtered, showFavsOnly, favorites],
+  );
+
   const displayPlaces = useMemo(() => {
     let base = showFavsOnly ? sorted.filter(p => favorites.has(p.id)) : sorted;
-    if (clusterIds) return places.filter(p => clusterIds.includes(p.id));
+    if (clusterIds) return filtered.filter(p => clusterIds.includes(p.id));
     if (!mapVisibleIds) return base;
     const viewport = new Set(mapVisibleIds);
     return base.filter(p => viewport.has(p.id) || p.id === selected?.id);
@@ -1258,7 +1264,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
 
         {mobileTab === "map" && (
           <div style={{ flex: 1, position: "relative", minHeight: 0, overflow: "hidden" }}>
-            <PlacesMap places={places} highlightedIds={highlightedIds} selected={selected} onSelect={handleMapSelect} onClusterSelect={handleClusterSelect} onBoundsChange={setMapVisibleIds} />
+            <PlacesMap places={mapPlaces} highlightedIds={highlightedIds} selected={selected} onSelect={handleMapSelect} onClusterSelect={handleClusterSelect} onBoundsChange={setMapVisibleIds} />
           </div>
         )}
 
