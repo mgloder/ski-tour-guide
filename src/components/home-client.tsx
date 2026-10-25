@@ -252,6 +252,87 @@ export function LevelRecommendations({ places }: LevelRecommendationsProps) {
   );
 }
 
+// ── Module progress cards (#89) ───────────────────────────────────────────
+
+function ModuleProgressCards() {
+  const [trainingCount, setTrainingCount] = useState(0);
+  const [favCount, setFavCount] = useState(0);
+  const [quizLevel, setQuizLevel] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("ski-training-v2");
+      if (raw) {
+        const parsed = JSON.parse(raw) as TrainingState;
+        setTrainingCount((parsed.checkedSkills ?? []).length);
+      }
+    } catch {}
+    try {
+      const raw = localStorage.getItem("ski-favorites-v1");
+      if (raw) {
+        const ids: string[] = JSON.parse(raw);
+        setFavCount(Array.isArray(ids) ? ids.length : 0);
+      }
+    } catch {}
+    try {
+      const raw = localStorage.getItem("ski-quiz-level");
+      if (raw) setQuizLevel(raw);
+    } catch {}
+  }, []);
+
+  const cards = [
+    {
+      href: "/training",
+      label: "Training",
+      status: trainingCount > 0
+        ? `${trainingCount} skill${trainingCount !== 1 ? "s" : ""} completed`
+        : "Not started",
+      active: trainingCount > 0,
+    },
+    {
+      href: "/places",
+      label: "Places",
+      status: favCount > 0
+        ? `${favCount} saved resort${favCount !== 1 ? "s" : ""}`
+        : "No saves yet",
+      active: favCount > 0,
+    },
+    {
+      href: "/equipment",
+      label: "Equipment",
+      status: quizLevel
+        ? `Level: ${quizLevel}`
+        : "Quiz not taken",
+      active: !!quizLevel,
+    },
+  ];
+
+  return (
+    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "1rem" }}>
+      {cards.map(card => (
+        <Link
+          key={card.label}
+          href={card.href}
+          style={{
+            border: "2px solid currentColor",
+            padding: "0.5rem 0.75rem",
+            textDecoration: "none",
+            color: "inherit",
+            display: "inline-flex",
+            flexDirection: "column",
+            gap: "0.15rem",
+            opacity: card.active ? 1 : 0.55,
+            minWidth: "7rem",
+          }}
+        >
+          <span style={{ fontWeight: 900, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>{card.label}</span>
+          <span style={{ fontSize: "0.6rem", opacity: 0.65 }}>{card.status}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 // ── Combined home client section ──────────────────────────────────────────
 
 type HomeClientProps = {
@@ -264,6 +345,7 @@ export default function HomeClient({ places }: HomeClientProps) {
       <RandomDestinationButton />
       <TrainingProgressTeaser />
       <LevelRecommendations places={places} />
+      <ModuleProgressCards />
     </div>
   );
 }

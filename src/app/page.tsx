@@ -159,9 +159,20 @@ export default async function Home() {
             <p className="bx-fw-black bx-uppercase bx-mb-1">Discovery</p>
             <p className="bx-text-sm">
               <a href="/llms.txt"><code>/llms.txt</code></a> — structured index<br />
-              <a href="/api/mcp"><code>GET /api/mcp</code></a> — tool list
+              <a href="/api/mcp" target="_blank"><code>GET /api/mcp</code></a> — tool list
             </p>
           </div>
+        </div>
+        <div style={{ marginTop: "1rem" }}>
+          <p className="bx-fw-black bx-uppercase bx-mb-1">Try it</p>
+          <pre className="bx-text-xs" style={{ fontFamily: "monospace", lineHeight: 1.6, opacity: 0.7, overflow: "auto", fontSize: "0.6rem" }}>
+{`curl -X POST /api/mcp \\
+  -H "Content-Type: application/json" \\
+  -d '{"jsonrpc":"2.0","id":1,
+       "method":"tools/call",
+       "params":{"name":"ski_list_places",
+                 "arguments":{"tags":["powder"]}}}'`}
+          </pre>
         </div>
       </div>
     </div>

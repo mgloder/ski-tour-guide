@@ -101,6 +101,26 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ── Feature #104: Pack list generator ────────────────────────────────────────
+function generatePackList(place: DbPlace, month: string | null): string[] {
+  const items: string[] = [];
+  const tags = new Set(place.tags ?? []);
+  // Always
+  items.push("Ski/snowboard", "Boots", "Helmet", "Goggles", "Gloves", "Base layers", "Ski jacket & pants", "Ski pass");
+  // Altitude-based
+  if ((place.altitude_peak ?? 0) > 2500) items.push("Sun cream SPF50+", "Glacier glasses");
+  // Feature-based
+  if (tags.has("backcountry") || tags.has("off-piste")) items.push("Avalanche transceiver", "Probe", "Shovel", "Backpack");
+  if (tags.has("night-skiing")) items.push("Warm hat", "Neck warmer");
+  if (tags.has("powder") || tags.has("off-piste")) items.push("Powder skis / rocker skis");
+  // Month-based
+  const earlyLate = ["Nov","Dec","Mar","Apr"].some(m => month?.startsWith(m));
+  if (earlyLate) items.push("Bluebird goggles", "Sunscreen");
+  const coldMonths = ["Jan","Feb"].some(m => month?.startsWith(m));
+  if (coldMonths) items.push("Hand warmers", "Thermal flask");
+  return [...new Set(items)];
+}
+
 function filterPlaces(
   places: DbPlace[],
   level: string | null,
@@ -111,6 +131,8 @@ function filterPlaces(
   vert: string | null,
   month: string | null,
   regionFilter: string | null,
+  minKm: number,
+  minAltitude: number,
 ) {
   const levelTags = LEVEL_OPTIONS.find(o => o.value === level)?.tags ?? [];
   // Feature A: collect tags for all selected terrains; place must satisfy ALL selected terrains
@@ -154,6 +176,8 @@ function filterPlaces(
     if (month) {
       if (!(p.best_months ?? []).some(m => m.startsWith(month.slice(0, 3)))) return false;
     }
+    if (minKm > 0 && (p.total_km ?? 0) < minKm) return false;
+    if (minAltitude > 0 && (p.altitude_base ?? 0) < minAltitude) return false;
     return true;
   });
 }
@@ -314,6 +338,20 @@ function RunStrip({ place }: { place: DbPlace }) {
   );
 }
 
+function AltitudeProfile({ base, peak, width = 100, height = 28 }: { base: number; peak: number; width?: number; height?: number }) {
+  if (!base || !peak || peak <= base) return null;
+  const points = `0,${height} ${width * 0.15},${height * 0.7} ${width * 0.45},${height * 0.2} ${width * 0.7},${height * 0.05} ${width},${height * 0.15} ${width},${height}`;
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: "0.3rem", marginTop: "0.25rem" }}>
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ opacity: 0.5, flexShrink: 0 }}>
+        <polygon points={points} fill="rgba(255,255,255,0.25)" />
+        <polyline points={`0,${height * 0.7} ${width * 0.15},${height * 0.7} ${width * 0.45},${height * 0.2} ${width * 0.7},${height * 0.05} ${width},${height * 0.15}`} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" />
+      </svg>
+      <span style={{ fontSize: "0.5rem", opacity: 0.45, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{base}m → {peak}m</span>
+    </div>
+  );
+}
+
 function TerrainDonut({ place, size = 40 }: { place: DbPlace; size?: number }) {
   const g = place.runs_green  || 0;
   const b = place.runs_blue   || 0;
@@ -442,6 +480,19 @@ type TripOverlayProps = {
 
 function TripOverlay({ tripIds, places, onClose, onRemove }: TripOverlayProps) {
   const tripPlaces = [...tripIds].map(id => places.find(p => p.id === id)).filter(Boolean) as DbPlace[];
+
+  // Feature #101: Collect all recommended gear for trip places, deduplicated
+  const tripGearIds = useMemo(() => {
+    const all: string[] = [];
+    for (const p of tripPlaces) {
+      for (const id of getRecommendedEquipment(p.tags)) {
+        if (!all.includes(id)) all.push(id);
+      }
+    }
+    return all;
+  }, [tripPlaces]);
+  const tripGearItems = equipment.filter(e => tripGearIds.includes(e.id));
+
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.85)", overflowY: "auto" }} onClick={onClose}>
       <div style={{ maxWidth: "600px", margin: "2rem auto", padding: "0 1rem 4rem" }} onClick={e => e.stopPropagation()}>
@@ -452,24 +503,43 @@ function TripOverlay({ tripIds, places, onClose, onRemove }: TripOverlayProps) {
         {tripPlaces.length === 0 ? (
           <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.85rem" }}>No resorts added yet. Open a resort and tap "Add to trip".</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {tripPlaces.map(p => (
-              <div key={p.id} style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.2)", padding: "0.75rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div>
-                  <p style={{ color: "#fff", fontWeight: 900, fontSize: "0.9rem", marginBottom: "0.2rem" }}>{p.name}</p>
-                  <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    {p.country}{p.total_km ? ` · ${p.total_km} km` : ""}{p.vertical_drop ? ` · ${p.vertical_drop}m vert` : ""}
-                  </p>
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {tripPlaces.map(p => (
+                <div key={p.id} style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.2)", padding: "0.75rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <p style={{ color: "#fff", fontWeight: 900, fontSize: "0.9rem", marginBottom: "0.2rem" }}>{p.name}</p>
+                    <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      {p.country}{p.total_km ? ` · ${p.total_km} km` : ""}{p.vertical_drop ? ` · ${p.vertical_drop}m vert` : ""}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => onRemove(p.id)}
+                    style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", padding: "0.25rem 0.5rem", flexShrink: 0, marginLeft: "0.75rem" }}
+                  >
+                    Remove
+                  </button>
                 </div>
-                <button
-                  onClick={() => onRemove(p.id)}
-                  style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", padding: "0.25rem 0.5rem", flexShrink: 0, marginLeft: "0.75rem" }}
-                >
-                  Remove
-                </button>
+              ))}
+            </div>
+            {tripGearItems.length > 0 && (
+              <div style={{ marginTop: "1.5rem" }}>
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.6rem" }}>Suggested gear</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
+                  {tripGearItems.map(e => (
+                    <Link
+                      key={e.id}
+                      href={`/equipment#${e.id}`}
+                      style={{ border: "1px solid rgba(255,255,255,0.4)", color: "#fff", padding: "0.2rem 0.55rem", fontSize: "0.65rem", textDecoration: "none", background: "rgba(255,255,255,0.07)" }}
+                      onClick={onClose}
+                    >
+                      {e.name}
+                    </Link>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -532,6 +602,11 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   const [placeWeather,  setPlaceWeather]  = useState<Record<string, { temp: number; wind: number; snow: number; desc: string } | "loading" | "error">>({});
   const [showCorrectionForm, setShowCorrectionForm] = useState<string | null>(null);
   const [correctionText,     setCorrectionText]     = useState("");
+  // Feature #31/#32: km + altitude sliders
+  const [minKm,              setMinKm]              = useState<number>(0);
+  const [minAltitude,        setMinAltitude]        = useState<number>(0);
+  // Feature #104: pack list
+  const [showPackList,       setShowPackList]       = useState<string | null>(null);
 
   // Feature D: swipe refs
   const touchStartX = useRef<number>(0);
@@ -583,12 +658,14 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     } else {
       try {
         const s = JSON.parse(localStorage.getItem(SK_FILTERS) || "{}");
-        if (s.level)   setLevel(s.level);
-        if (s.terrain) setTerrain(Array.isArray(s.terrain) ? s.terrain : []);
-        if (s.size)    setSize(s.size);
-        if (s.vert)    setVert(s.vert);
+        if (s.level)        setLevel(s.level);
+        if (s.terrain)      setTerrain(Array.isArray(s.terrain) ? s.terrain : []);
+        if (s.size)         setSize(s.size);
+        if (s.vert)         setVert(s.vert);
         if (s.sortBy && s.sortBy !== "size") setSortBy(s.sortBy);
         if (s.regionFilter) setRegionFilter(s.regionFilter);
+        if (typeof s.minKm === "number")       setMinKm(s.minKm);
+        if (typeof s.minAltitude === "number") setMinAltitude(s.minAltitude);
       } catch {}
     }
 
@@ -612,14 +689,14 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     const str = params.toString();
     window.history.replaceState(null, "", str ? `?${str}` : window.location.pathname);
     try {
-      localStorage.setItem(SK_FILTERS, JSON.stringify({ level, terrain, size, vert, sortBy, regionFilter }));
+      localStorage.setItem(SK_FILTERS, JSON.stringify({ level, terrain, size, vert, sortBy, regionFilter, minKm, minAltitude }));
     } catch {}
-  }, [level, terrain, country, size, vert, query, month, sortBy, regionFilter]);
+  }, [level, terrain, country, size, vert, query, month, sortBy, regionFilter, minKm, minAltitude]);
 
   // ── Data pipeline ─────────────────────────────────────────────────────────
   const filtered = useMemo(
-    () => filterPlaces(places, level, terrain, query, country, size, vert, month, regionFilter),
-    [places, level, terrain, query, country, size, vert, month, regionFilter],
+    () => filterPlaces(places, level, terrain, query, country, size, vert, month, regionFilter, minKm, minAltitude),
+    [places, level, terrain, query, country, size, vert, month, regionFilter, minKm, minAltitude],
   );
   const sorted = useMemo(
     () => sortPlaces(filtered, sortBy, userCoords),
@@ -647,7 +724,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     [recentIds, places],
   );
 
-  const activeFilterCount = [level, country, size, vert, query, month].filter(Boolean).length + terrain.length;
+  const activeFilterCount = [level, country, size, vert, query, month].filter(Boolean).length + terrain.length + (minKm > 0 ? 1 : 0) + (minAltitude > 0 ? 1 : 0);
 
   const chips: { key: string; label: string; clear: () => void }[] = [
     ...(level   ? [{ key: "level",   label: LEVEL_OPTIONS.find(o => o.value === level)?.label ?? level,       clear: () => reset({ level: null }) }] : []),
@@ -657,6 +734,8 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     ...(vert    ? [{ key: "vert",    label: `Vert ${VERT_OPTIONS.find(o => o.value === vert)?.hint ?? vert}`,  clear: () => reset({ vert: null }) }] : []),
     ...(month   ? [{ key: "month",   label: month,                                                              clear: () => reset({ month: null }) }] : []),
     ...(query   ? [{ key: "query",   label: `"${query}"`,                                                       clear: () => reset({ query: "" }) }] : []),
+    ...(minKm > 0       ? [{ key: "minkm",  label: `${minKm}+ km`,       clear: () => setMinKm(0) }] : []),
+    ...(minAltitude > 0 ? [{ key: "minalt", label: `${minAltitude}+ m base`, clear: () => setMinAltitude(0) }] : []),
   ];
 
   // ── Infinite scroll sentinel ──────────────────────────────────────────────
@@ -713,6 +792,7 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
 
   function clearAll() {
     setLevel(null); setTerrain([]); setCountry(null); setSize(null); setVert(null); setQuery(""); setMonth(null); setRegionFilter(null);
+    setMinKm(0); setMinAltitude(0);
     setSelected(null); setClusterIds(null); setVisible(PAGE);
   }
 
@@ -845,10 +925,13 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           {(place.runs_nordic   ?? 0) > 0 && <span>{place.runs_nordic} nordic trails</span>}
         </div>
 
-        {/* Terrain donut + RunStrip */}
+        {/* Terrain donut + RunStrip + altitude profile */}
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
           <TerrainDonut place={place} size={44} />
-          <div style={{ flex: 1, minWidth: 0 }}><RunStrip place={place} /></div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <RunStrip place={place} />
+            {place.altitude_base && place.altitude_peak && <AltitudeProfile base={place.altitude_base} peak={place.altitude_peak} />}
+          </div>
         </div>
 
         {/* Highlights */}
@@ -888,6 +971,9 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           {place.latitude && place.longitude && (
             <a href={`https://www.panomax.com/search#${encodeURIComponent(place.name)}`} target="_blank" rel="noopener noreferrer" style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.35rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>Webcams ↗</a>
           )}
+          {place.name && (
+            <a href={`https://www.onthesnow.com/search#${encodeURIComponent(place.name)}`} target="_blank" rel="noopener noreferrer" style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", padding: "0.35rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", textDecoration: "none" }}>Snow ↗</a>
+          )}
           <button onClick={e => copyCoords(e, place)} style={{ border: "2px solid rgba(255,255,255,0.6)", color: "#fff", background: "transparent", padding: "0.35rem 0.6rem", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer" }}>
             {copied === "coords" ? "Copied!" : "Coords"}
           </button>
@@ -918,6 +1004,23 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
             </div>
           </div>
         )}
+
+        {/* Pack list */}
+        <div style={{ marginTop: "0.5rem" }}>
+          <button
+            onClick={() => setShowPackList(showPackList === place.id ? null : place.id)}
+            style={{ background: "none", border: "none", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: 0 }}
+          >
+            {showPackList === place.id ? "▲ Pack list" : "▼ Pack list"}
+          </button>
+          {showPackList === place.id && (
+            <div style={{ marginTop: "0.4rem", display: "flex", flexWrap: "wrap", gap: "0.2rem 0.4rem" }}>
+              {generatePackList(place, month).map(item => (
+                <span key={item} style={{ fontSize: "0.65rem", border: "1px solid rgba(255,255,255,0.3)", padding: "0.1rem 0.4rem", opacity: 0.8 }}>{item}</span>
+              ))}
+            </div>
+          )}
+        </div>
 
         {showCorrectionForm === place.id ? (
           <div style={{ marginTop: "0.75rem" }}>
@@ -1351,6 +1454,23 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
                   {VERT_OPTIONS.map(o => <Pill key={String(o.value)} label={o.label} hint={o.hint} active={vert === o.value} onClick={() => reset({ vert: o.value })} />)}
                 </div>
               </div>
+            </div>
+
+            {/* Min km slider */}
+            <div style={{ marginBottom: "0.5rem" }}>
+              <p style={{ fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.4, marginBottom: "0.3rem" }}>
+                Min piste length: {minKm === 0 ? "Any" : `${minKm}+ km`}
+              </p>
+              <input type="range" min={0} max={300} step={25} value={minKm} onChange={e => { setMinKm(Number(e.target.value)); setVisible(PAGE); }}
+                style={{ width: "100%", cursor: "pointer" }} />
+            </div>
+            {/* Min altitude slider */}
+            <div style={{ marginBottom: "0.5rem" }}>
+              <p style={{ fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.4, marginBottom: "0.3rem" }}>
+                Min base altitude: {minAltitude === 0 ? "Any" : `${minAltitude}+ m`}
+              </p>
+              <input type="range" min={0} max={2000} step={100} value={minAltitude} onChange={e => { setMinAltitude(Number(e.target.value)); setVisible(PAGE); }}
+                style={{ width: "100%", cursor: "pointer" }} />
             </div>
 
             {/* Month */}
