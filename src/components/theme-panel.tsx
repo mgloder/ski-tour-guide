@@ -28,13 +28,16 @@ export default function ThemePanel() {
   }, []);
 
   return (
-    <details ref={detailsRef} style={{ position: "relative", background: "var(--bx-paper)", border: "2px solid currentColor" }}>
+    <details ref={detailsRef} style={{ position: "relative" }}>
       <summary style={{
-        padding: "0.3rem 0.6rem", cursor: "pointer", listStyle: "none",
-        fontFamily: "inherit", fontWeight: 900, fontSize: "0.65rem",
-        textTransform: "uppercase", letterSpacing: "0.12em",
+        padding: "0.45em 0.9em", cursor: "pointer", listStyle: "none",
+        fontFamily: "inherit", fontWeight: 900, fontSize: "0.75rem",
+        textTransform: "uppercase", letterSpacing: "0.08em",
         display: "flex", alignItems: "center", gap: "0.3rem",
         whiteSpace: "nowrap",
+        border: "2px solid currentColor",
+        background: "transparent", color: "inherit",
+        lineHeight: 1,
       }}>
         ◐ Theme
       </summary>
