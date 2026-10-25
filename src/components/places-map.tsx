@@ -29,6 +29,54 @@ async function fetchPistes(placeId: string, signal: AbortSignal) {
   return res.json() as Promise<{ type: "FeatureCollection"; features: { type: "Feature"; geometry: { type: "LineString"; coordinates: [number, number][] }; properties: { kind: string; difficulty: string; liftCategory?: string } }[] }>;
 }
 
+function _haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * Remove piste/lift features that belong to neighbouring resorts.
+ * Strategy: find the median centroid of all piste features (robust against outliers),
+ * then keep only features within an adaptive radius scaled by resort size.
+ */
+function filterPistesByProximity(geojson: { type: "FeatureCollection"; features: any[] }, place: DbPlace): { type: "FeatureCollection"; features: any[] } {
+  const features = geojson.features;
+  const pistes = features.filter(f => f.properties?.kind === "piste");
+  if (pistes.length === 0) return geojson;
+
+  // Centroid of each piste feature
+  const centroids = pistes.map(f => {
+    const coords: [number, number][] = f.geometry.coordinates;
+    const lng = coords.reduce((s, c) => s + c[0], 0) / coords.length;
+    const lat = coords.reduce((s, c) => s + c[1], 0) / coords.length;
+    return { lat, lng };
+  });
+
+  // Median lat + lng (independent sort — robust against outliers)
+  const sortedByLat = [...centroids].sort((a, b) => a.lat - b.lat);
+  const sortedByLng = [...centroids].sort((a, b) => a.lng - b.lng);
+  const mid = Math.floor(centroids.length / 2);
+  const medLat = sortedByLat[mid].lat;
+  const medLng = sortedByLng[mid].lng;
+
+  // Adaptive radius: sqrt(km * 0.8), clamped to [6, 22] km
+  const km = place.total_km ?? 50;
+  const maxDistKm = Math.max(6, Math.min(22, Math.sqrt(km * 0.8)));
+
+  return {
+    ...geojson,
+    features: features.filter(f => {
+      const coords: [number, number][] = f.geometry.coordinates;
+      const lng = coords.reduce((s, c) => s + c[0], 0) / coords.length;
+      const lat = coords.reduce((s, c) => s + c[1], 0) / coords.length;
+      return _haversineKm(medLat, medLng, lat, lng) <= maxDistKm;
+    }),
+  };
+}
+
 /** Annotate each lift feature with a liftCategory based on coordinate count (proxy for length). */
 function annotateLiftCategories(geojson: { type: "FeatureCollection"; features: any[] }) {
   return {
@@ -344,7 +392,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       const cached = sessionStorage.getItem("ski-piste-" + place.id);
       if (cached) {
         const rawGeojson = JSON.parse(cached);
-        const geojson = annotateLiftCategories(rawGeojson);
+        const geojson = annotateLiftCategories(filterPistesByProximity(rawGeojson, place));
         setPisteLoading(false);
         if (!mapRef.current || map.getSource("ski")) return;
         map.addSource("ski", { type: "geojson", data: geojson });
@@ -400,9 +448,9 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       if (abort.signal.aborted) return;
       setPisteLoading(false);
       if (!mapRef.current || map.getSource("ski")) return;
-      // Annotate lift categories before caching
-      const annotated = annotateLiftCategories(geojson);
-      // Store in sessionStorage cache (#120)
+      // Filter neighbouring-resort features, then annotate lift categories
+      const annotated = annotateLiftCategories(filterPistesByProximity(geojson, place));
+      // Store cleaned data in sessionStorage cache (#120)
       try { sessionStorage.setItem("ski-piste-" + place.id, JSON.stringify(annotated)); } catch { /* quota exceeded or private mode */ }
       map.addSource("ski", { type: "geojson", data: annotated });
       // Feature 1: two lift sub-layers by category
