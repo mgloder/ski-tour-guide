@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ThemePanel from "@/components/theme-panel";
 
 export default function Nav() {
   return (
@@ -11,14 +12,17 @@ export default function Nav() {
         <li><Link href="/equipment" className="bx-nav-link">Equipment</Link></li>
         <li><Link href="/places" className="bx-nav-link">Places</Link></li>
       </ul>
-      <a
-        href="/api/mcp"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="bx-btn bx-btn-ghost bx-btn-xs"
-      >
-        MCP
-      </a>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginLeft: "auto" }}>
+        <a
+          href="/api/mcp"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bx-btn bx-btn-ghost bx-btn-xs"
+        >
+          MCP
+        </a>
+        <ThemePanel />
+      </div>
     </nav>
   );
 }

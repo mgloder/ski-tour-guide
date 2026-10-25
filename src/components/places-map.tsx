@@ -50,7 +50,8 @@ function filterPistesByProximity(geojson: { type: "FeatureCollection"; features:
 
   // Adaptive radius: max(12, min(25, sqrt(km * 1.5))) km
   // 50 km → 12 km,  100 km → 12.2 km,  200 km → 17.3 km,  600 km → 25 km
-  const km = place.total_km ?? 0;
+  // Unknown size (null) defaults to 400 km equivalent → ~24 km radius, covering the full Overpass bbox
+  const km = place.total_km ?? 400;
   const maxDistKm = Math.max(12, Math.min(25, Math.sqrt(km * 1.5)));
 
   return {
@@ -377,7 +378,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
 
     // Check sessionStorage cache before fetching (#120)
     try {
-      const cached = sessionStorage.getItem("ski-piste-v2-" + place.id);
+      const cached = sessionStorage.getItem("ski-piste-v3-" + place.id);
       if (cached) {
         const rawGeojson = JSON.parse(cached);
         const geojson = annotateLiftCategories(filterPistesByProximity(rawGeojson, place));
@@ -439,7 +440,7 @@ export default function PlacesMap({ places, highlightedIds, selected, onSelect, 
       // Filter neighbouring-resort features, then annotate lift categories
       const annotated = annotateLiftCategories(filterPistesByProximity(geojson, place));
       // Store cleaned data in sessionStorage cache (#120)
-      try { sessionStorage.setItem("ski-piste-v2-" + place.id, JSON.stringify(annotated)); } catch { /* quota exceeded or private mode */ }
+      try { sessionStorage.setItem("ski-piste-v3-" + place.id, JSON.stringify(annotated)); } catch { /* quota exceeded or private mode */ }
       map.addSource("ski", { type: "geojson", data: annotated });
       // Feature 1: two lift sub-layers by category
       map.addLayer({ id: "lifts-short", type: "line", source: "ski",

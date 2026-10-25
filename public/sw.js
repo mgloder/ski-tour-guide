@@ -1,6 +1,6 @@
 // Service Worker — offline shell + recently-viewed place cache
-const SHELL_CACHE = "ski-shell-v1";
-const DATA_CACHE  = "ski-data-v1";
+const SHELL_CACHE = "ski-shell-v2";
+const DATA_CACHE  = "ski-data-v2";
 
 const SHELL_URLS = [
   "/",

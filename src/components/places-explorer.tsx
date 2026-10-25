@@ -819,6 +819,13 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
     if (selected) fetchWeather(selected);
   }, [selected, fetchWeather]);
 
+  // Lock body scroll on mobile so the map view fills the viewport without a scrollbar
+  useEffect(() => {
+    if (!isMobile) return;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, [isMobile]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   function reset(patch: Partial<{ level: string|null; country: string|null; size: string|null; vert: string|null; query: string; month: string|null }>) {
     if ("level"   in patch) setLevel(patch.level!);
@@ -1245,32 +1252,25 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
   }
 
   // ── MOBILE LAYOUT ─────────────────────────────────────────────────────────
+  // Uses position:fixed so it fills the full viewport without a page scrollbar.
+  // The sticky nav (z-index 40) floats over the top; the bottom tab bar is always reachable.
+  const TAB_BAR_H = 52;
   if (isMobile) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        {/* Tab bar */}
-        <div style={{ display: "flex", borderBottom: "3px solid currentColor", flexShrink: 0 }}>
-          {(["map", "list"] as const).map((tab, i) => (
-            <button
-              key={tab}
-              onClick={() => setMobileTab(tab)}
-              style={{ flex: 1, height: "48px", border: "none", borderRight: i === 0 ? "2px solid currentColor" : "none", background: mobileTab === tab ? "currentColor" : "transparent", color: mobileTab === tab ? "var(--bx-paper, #fff)" : "inherit", cursor: "pointer", fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
-            >
-              {tab === "map" ? "Map" : `List · ${displayPlaces.length}`}
-              {tab === "map" && activeFilterCount > 0 && (
-                <span style={{ background: "var(--bx-primary, #2b44ff)", color: "#fff", borderRadius: "99px", padding: "0.1rem 0.4rem", fontSize: "0.6rem", fontWeight: 900 }}>{activeFilterCount}</span>
-              )}
-            </button>
-          ))}
-        </div>
+      <div style={{ position: "fixed", inset: 0, zIndex: 10, display: "flex", flexDirection: "column", background: "var(--bx-paper, #fff)" }}>
 
-        {/* Map always mounted so piste overlay persists when switching tabs */}
-        <div style={{ flex: mobileTab === "map" ? 1 : 0, position: "relative", minHeight: 0, overflow: "hidden", display: mobileTab === "map" ? undefined : "none" }}>
-          <PlacesMap places={mapPlaces} highlightedIds={highlightedIds} selected={selected} onSelect={handleMapSelect} onClusterSelect={handleClusterSelect} onBoundsChange={setMapVisibleIds} />
-        </div>
+        {/* Content area — fills between top and bottom tab bar */}
+        <div style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0 }}>
 
-        {mobileTab === "list" && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          {/* Map always mounted so piste overlay persists when switching tabs */}
+          <div style={{ position: "absolute", inset: 0, display: mobileTab === "map" ? undefined : "none" }}>
+            <PlacesMap places={mapPlaces} highlightedIds={highlightedIds} selected={selected} onSelect={handleMapSelect} onClusterSelect={handleClusterSelect} onBoundsChange={setMapVisibleIds} />
+          </div>
+
+          {mobileTab === "list" && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column" }}>
+              {/* Spacer so content starts below the sticky nav (~54px) */}
+              <div style={{ height: "54px", flexShrink: 0 }} />
             {/* Filter strip */}
             <div style={{ flexShrink: 0, borderBottom: "3px solid currentColor", padding: "0.5rem 0.75rem", display: "flex", gap: "0.4rem", overflowX: "auto", alignItems: "center", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"] }}>
               <input type="search" placeholder="Search…" value={query} onChange={e => reset({ query: e.target.value })} style={{ height: "44px", border: "2px solid currentColor", background: "transparent", color: "inherit", padding: "0 0.6rem", fontSize: "0.8rem", fontFamily: "inherit", outline: "none", flexShrink: 0, width: "120px" }} />
@@ -1400,9 +1400,27 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           </div>
         )}
 
-        {/* Compare floating bar */}
+        </div>{/* end content area */}
+
+        {/* Bottom tab bar — always visible, no scrolling needed */}
+        <div style={{ display: "flex", borderTop: "3px solid currentColor", flexShrink: 0, height: `${TAB_BAR_H}px`, background: "var(--bx-paper, #fff)" }}>
+          {(["map", "list"] as const).map((tab, i) => (
+            <button
+              key={tab}
+              onClick={() => setMobileTab(tab)}
+              style={{ flex: 1, height: "100%", border: "none", borderRight: i === 0 ? "2px solid currentColor" : "none", background: mobileTab === tab ? "currentColor" : "transparent", color: mobileTab === tab ? "var(--bx-paper, #fff)" : "inherit", cursor: "pointer", fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+            >
+              {tab === "map" ? "Map" : `List · ${displayPlaces.length}`}
+              {tab === "map" && activeFilterCount > 0 && (
+                <span style={{ background: "var(--bx-primary, #2b44ff)", color: "#fff", borderRadius: "99px", padding: "0.1rem 0.4rem", fontSize: "0.6rem", fontWeight: 900 }}>{activeFilterCount}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Compare floating bar — sits above bottom tab bar */}
         {compareIds.size >= 2 && (
-          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200, background: "var(--bx-primary,#2b44ff)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderTop: "3px solid currentColor" }}>
+          <div style={{ position: "fixed", bottom: TAB_BAR_H, left: 0, right: 0, zIndex: 200, background: "var(--bx-primary,#2b44ff)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderTop: "3px solid currentColor" }}>
             <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Compare {compareIds.size} resorts</span>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <button onClick={() => setShowCompare(true)} style={{ border: "2px solid #fff", background: "#fff", color: "var(--bx-primary,#2b44ff)", padding: "0.3rem 0.6rem", cursor: "pointer", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em" }}>View →</button>
@@ -1411,11 +1429,11 @@ export default function PlacesExplorer({ places }: { places: DbPlace[] }) {
           </div>
         )}
 
-        {/* Bottom sheet (#74) — compact peek on map tab, expandable for detail */}
+        {/* Bottom sheet — compact peek on map tab, expandable for detail; sits above tab bar */}
         {isMobile && selected && bottomSheetOpen && (
           <div
             style={{
-              position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300,
+              position: "fixed", bottom: TAB_BAR_H, left: 0, right: 0, zIndex: 300,
               background: "var(--bx-paper,#fff)", color: "var(--bx-ink,#111)",
               borderTop: "3px solid currentColor",
               maxHeight: bottomSheetExpanded ? "72dvh" : "52dvh",
