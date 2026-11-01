@@ -4,11 +4,13 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { DbPlace } from "@/lib/places";
+import { useLocale } from "@/components/i18n-provider";
 
 // ── Random Destination Button ─────────────────────────────────────────────
 
 export function RandomDestinationButton() {
   const router = useRouter();
+  const { t } = useLocale();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,7 +64,7 @@ export function RandomDestinationButton() {
           opacity: loading ? 0.5 : 1,
         }}
       >
-        {loading ? "Finding…" : "Random Destination"}
+        {loading ? t.homeClient.finding : t.homeClient.randomDestination}
       </button>
       {error && (
         <span style={{ fontSize: "0.7rem", opacity: 0.5 }}>{error}</span>
@@ -79,6 +81,7 @@ type TrainingState = {
 };
 
 export function TrainingProgressTeaser() {
+  const { t } = useLocale();
   const [hasProgress, setHasProgress] = useState(false);
   const [count, setCount] = useState(0);
 
@@ -112,10 +115,10 @@ export function TrainingProgressTeaser() {
     }}>
       <div>
         <p style={{ fontWeight: 900, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>
-          Training in progress
+          {t.homeClient.trainingInProgress}
         </p>
         <p style={{ fontSize: "0.65rem", opacity: 0.5, margin: "0.15rem 0 0" }}>
-          {count} skill{count !== 1 ? "s" : ""} completed
+          {t.homeClient.skillsCompleted(count)}
         </p>
       </div>
       <Link
@@ -132,7 +135,7 @@ export function TrainingProgressTeaser() {
           flexShrink: 0,
         }}
       >
-        Continue your training →
+        {t.homeClient.continueTraining}
       </Link>
     </div>
   );
@@ -145,40 +148,26 @@ type FiltersState = {
   [key: string]: unknown;
 };
 
-// Map storage level values to place tags
 const LEVEL_TAG_MAP: Record<string, string> = {
-  beginner:     "beginner-friendly",
-  intermediate: "intermediate",
-  advanced:     "advanced",
-  expert:       "expert",
-  // training context values
+  beginner:           "beginner-friendly",
+  intermediate:       "intermediate",
+  advanced:           "advanced",
+  expert:             "expert",
   "first-timer":      "beginner-friendly",
   "some-experience":  "beginner-friendly",
 };
-
-function levelLabel(level: string): string {
-  const labels: Record<string, string> = {
-    beginner: "Beginner",
-    intermediate: "Intermediate",
-    advanced: "Advanced",
-    expert: "Expert",
-    "first-timer": "First-timer",
-    "some-experience": "Some experience",
-  };
-  return labels[level] ?? level;
-}
 
 type LevelRecommendationsProps = {
   places: DbPlace[];
 };
 
 export function LevelRecommendations({ places }: LevelRecommendationsProps) {
+  const { t } = useLocale();
   const [level, setLevel] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<DbPlace[]>([]);
 
   useEffect(() => {
     try {
-      // Check ski-filters-v1 first
       const raw = localStorage.getItem("ski-filters-v1");
       if (raw) {
         const parsed = JSON.parse(raw) as FiltersState;
@@ -187,7 +176,6 @@ export function LevelRecommendations({ places }: LevelRecommendationsProps) {
           return;
         }
       }
-      // Fallback: check training context
       const trainingRaw = localStorage.getItem("ski-training-v2");
       if (trainingRaw) {
         const parsed = JSON.parse(trainingRaw) as TrainingState;
@@ -217,13 +205,13 @@ export function LevelRecommendations({ places }: LevelRecommendationsProps) {
     <div style={{ marginTop: "1.5rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.6rem" }}>
         <p className="bx-text-xs bx-uppercase bx-fw-black bx-tracking-wide" style={{ opacity: 0.5 }}>
-          Recommended for {levelLabel(level)}
+          {t.homeClient.recommendedFor(t.homeClient.levelDisplay(level))}
         </p>
         <Link
           href={`/places?tags=${LEVEL_TAG_MAP[level] ?? level}`}
           style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.4, textDecoration: "none", color: "inherit" }}
         >
-          See all →
+          {t.homeClient.seeAll}
         </Link>
       </div>
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -252,9 +240,10 @@ export function LevelRecommendations({ places }: LevelRecommendationsProps) {
   );
 }
 
-// ── Module progress cards (#89) ───────────────────────────────────────────
+// ── Module progress cards ─────────────────────────────────────────────────
 
 function ModuleProgressCards() {
+  const { t } = useLocale();
   const [trainingCount, setTrainingCount] = useState(0);
   const [favCount, setFavCount] = useState(0);
   const [quizLevel, setQuizLevel] = useState<string | null>(null);
@@ -283,26 +272,20 @@ function ModuleProgressCards() {
   const cards = [
     {
       href: "/training",
-      label: "Training",
-      status: trainingCount > 0
-        ? `${trainingCount} skill${trainingCount !== 1 ? "s" : ""} completed`
-        : "Not started",
+      label: t.nav.training,
+      status: trainingCount > 0 ? t.homeClient.skillsCompleted(trainingCount) : t.homeClient.notStarted,
       active: trainingCount > 0,
     },
     {
       href: "/places",
-      label: "Places",
-      status: favCount > 0
-        ? `${favCount} saved resort${favCount !== 1 ? "s" : ""}`
-        : "No saves yet",
+      label: t.nav.places,
+      status: favCount > 0 ? t.homeClient.savedResorts(favCount) : t.homeClient.noSavesYet,
       active: favCount > 0,
     },
     {
       href: "/equipment",
-      label: "Equipment",
-      status: quizLevel
-        ? `Level: ${quizLevel}`
-        : "Quiz not taken",
+      label: t.nav.equipment,
+      status: quizLevel ? t.homeClient.levelLabel(quizLevel) : t.homeClient.quizNotTaken,
       active: !!quizLevel,
     },
   ];
@@ -333,9 +316,10 @@ function ModuleProgressCards() {
   );
 }
 
-// ── PWA install prompt (#82) ──────────────────────────────────────────────
+// ── PWA install prompt ────────────────────────────────────────────────────
 
 function PWAInstallPrompt() {
+  const { t } = useLocale();
   const [deferredPrompt, setDeferredPrompt] = useState<Event & { prompt: () => void } | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -349,9 +333,9 @@ function PWAInstallPrompt() {
   if (!deferredPrompt || dismissed) return null;
   return (
     <div style={{ marginTop: "1rem", border: "2px solid currentColor", padding: "0.75rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-      <p style={{ fontSize: "0.75rem", fontWeight: 700, margin: 0 }}>Add The Ski Handbook to your home screen for quick access.</p>
+      <p style={{ fontSize: "0.75rem", fontWeight: 700, margin: 0 }}>{t.homeClient.addToHomeScreen}</p>
       <div style={{ display: "flex", gap: "0.4rem" }}>
-        <button onClick={() => { deferredPrompt.prompt(); setDeferredPrompt(null); }} style={{ border: "2px solid currentColor", background: "currentColor", color: "var(--bx-paper,#fff)", padding: "0.35rem 0.75rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase" }}>Install</button>
+        <button onClick={() => { deferredPrompt.prompt(); setDeferredPrompt(null); }} style={{ border: "2px solid currentColor", background: "currentColor", color: "var(--bx-paper,#fff)", padding: "0.35rem 0.75rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase" }}>{t.homeClient.install}</button>
         <button onClick={() => { setDismissed(true); try { localStorage.setItem("ski-pwa-dismissed", "1"); } catch {} }} style={{ border: "2px solid currentColor", background: "transparent", padding: "0.35rem 0.6rem", cursor: "pointer", fontSize: "0.7rem", fontWeight: 700 }}>×</button>
       </div>
     </div>

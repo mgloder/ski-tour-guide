@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Nav from "@/components/nav";
 import SWRegister from "@/components/sw-register";
+import { I18nProvider } from "@/components/i18n-provider";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>
         <Script src="/brutalix.js" strategy="afterInteractive" />
+        <I18nProvider>
         <div className="site-frame" style={{
           maxWidth: "1100px",
           margin: "0 auto",
@@ -75,6 +77,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </div>
 
         <SWRegister />
+        </I18nProvider>
       </body>
     </html>
   );
